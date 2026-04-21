@@ -779,3 +779,148 @@ def relatorios():
      .limit(10).all()
 
     return render_template('admin/relatorios.html', ranking=ranking)
+
+
+# ── BACKUP / RESTAURAÇÃO ──────────────────────────────────────────────────────
+
+@admin_bp.route('/backup')
+@login_required
+def backup():
+    return render_template('admin/backup.html')
+
+
+@admin_bp.route('/backup/exportar')
+@login_required
+def backup_exportar():
+    from flask import Response
+
+    trimestres = []
+    for t in Trimestre.query.all():
+        licoes = []
+        for l in t.licoes:
+            licoes.append({'numero': l.numero, 'titulo': l.titulo, 'link': l.link})
+        quizzes = []
+        for q in Quiz.query.filter_by(trimestre_id=t.id).all():
+            respostas = []
+            for r in RespostaQuiz.query.filter_by(quiz_id=q.id).all():
+                respostas.append({
+                    'aluno_matricula': r.aluno.matricula,
+                    'acertos': r.acertos,
+                    'total_perguntas': r.total_perguntas,
+                    'pontuacao': r.pontuacao,
+                    'data_resposta': r.data_resposta.isoformat(),
+                })
+            quizzes.append({
+                'titulo': q.titulo,
+                'nivel': q.nivel,
+                'tipo': q.tipo,
+                'escopo': q.escopo,
+                'token': q.token,
+                'ativo': q.ativo,
+                'created_at': q.created_at.isoformat(),
+                'perguntas_json': q.perguntas_json,
+                'respostas': respostas,
+            })
+        trimestres.append({
+            'ano': t.ano,
+            'numero': t.numero,
+            'tema': t.tema,
+            'ativo': t.ativo,
+            'licoes': licoes,
+            'quizzes': quizzes,
+        })
+
+    alunos = []
+    for a in Aluno.query.all():
+        alunos.append({
+            'nome': a.nome,
+            'matricula': a.matricula,
+            'ativo': a.ativo,
+            'created_at': a.created_at.isoformat(),
+        })
+
+    dados = {
+        'versao': 1,
+        'exportado_em': datetime.utcnow().isoformat(),
+        'trimestres': trimestres,
+        'alunos': alunos,
+    }
+
+    conteudo = json.dumps(dados, ensure_ascii=False, indent=2)
+    nome_arquivo = f"backup_ebd_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json"
+    return Response(
+        conteudo,
+        mimetype='application/json',
+        headers={'Content-Disposition': f'attachment; filename={nome_arquivo}'}
+    )
+
+
+@admin_bp.route('/backup/restaurar', methods=['POST'])
+@login_required
+def backup_restaurar():
+    arquivo = request.files.get('arquivo')
+    if not arquivo or not arquivo.filename.endswith('.json'):
+        flash('Selecione um arquivo .json válido.', 'danger')
+        return redirect(url_for('admin.backup'))
+
+    try:
+        dados = json.loads(arquivo.read().decode('utf-8'))
+        if dados.get('versao') != 1:
+            flash('Formato de backup incompatível.', 'danger')
+            return redirect(url_for('admin.backup'))
+
+        # Alunos
+        for a in dados.get('alunos', []):
+            if not Aluno.query.filter_by(matricula=a['matricula']).first():
+                aluno = Aluno(nome=a['nome'], matricula=a['matricula'], ativo=a.get('ativo', True))
+                db.session.add(aluno)
+        db.session.flush()
+
+        # Trimestres, lições e quizzes
+        for t in dados.get('trimestres', []):
+            trimestre = Trimestre.query.filter_by(ano=t['ano'], numero=t['numero']).first()
+            if not trimestre:
+                trimestre = Trimestre(ano=t['ano'], numero=t['numero'], tema=t['tema'], ativo=t.get('ativo', True))
+                db.session.add(trimestre)
+                db.session.flush()
+
+            for l in t.get('licoes', []):
+                if not Licao.query.filter_by(trimestre_id=trimestre.id, numero=l['numero']).first():
+                    db.session.add(Licao(trimestre_id=trimestre.id, numero=l['numero'],
+                                         titulo=l['titulo'], link=l.get('link', '')))
+
+            for q in t.get('quizzes', []):
+                if not Quiz.query.filter_by(token=q.get('token')).first():
+                    quiz = Quiz(
+                        trimestre_id=trimestre.id,
+                        titulo=q['titulo'],
+                        nivel=q.get('nivel', 'intermediario'),
+                        tipo=q.get('tipo', 'normal'),
+                        escopo=q.get('escopo', 'trimestre'),
+                        token=q.get('token') or secrets.token_urlsafe(20),
+                        ativo=q.get('ativo', True),
+                        perguntas_json=q['perguntas_json'],
+                    )
+                    db.session.add(quiz)
+                    db.session.flush()
+
+                    for r in q.get('respostas', []):
+                        aluno = Aluno.query.filter_by(matricula=r['aluno_matricula']).first()
+                        if aluno:
+                            resp = RespostaQuiz(
+                                quiz_id=quiz.id,
+                                aluno_id=aluno.id,
+                                acertos=r['acertos'],
+                                total_perguntas=r['total_perguntas'],
+                                pontuacao=r['pontuacao'],
+                                data_resposta=datetime.fromisoformat(r['data_resposta']),
+                            )
+                            db.session.add(resp)
+
+        db.session.commit()
+        flash('Backup restaurado com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao restaurar: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.backup'))

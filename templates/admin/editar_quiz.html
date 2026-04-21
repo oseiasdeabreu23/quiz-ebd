@@ -8,8 +8,6 @@
 
 {% block admin_content %}
 <form method="POST">
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
   {% for p in dados.perguntas %}
   <div class="card" style="margin-bottom:1.5rem">
     <div class="card-header" style="display:flex;align-items:center;gap:.75rem">

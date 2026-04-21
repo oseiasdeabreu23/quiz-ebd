@@ -1,0 +1,47 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Backup — EBD Digital{% endblock %}
+{% block page_title %}Backup e Restauração{% endblock %}
+
+{% block admin_content %}
+<div class="two-col">
+
+  <!-- Exportar -->
+  <div class="card">
+    <div class="card-header"><h3>⬇️ Exportar Backup</h3></div>
+    <div class="card-body">
+      <p style="color:var(--text-muted);margin-bottom:1.25rem">
+        Gera um arquivo <strong>.json</strong> com todos os dados: trimestres, lições, quizzes, alunos e resultados.
+        Guarde esse arquivo em local seguro.
+      </p>
+      <a href="{{ url_for('admin.backup_exportar') }}" class="btn btn-primary btn-block">
+        ⬇️ Baixar Backup Completo
+      </a>
+    </div>
+  </div>
+
+  <!-- Restaurar -->
+  <div class="card">
+    <div class="card-header"><h3>⬆️ Restaurar Backup</h3></div>
+    <div class="card-body">
+      <p style="color:var(--text-muted);margin-bottom:.5rem">
+        Importa dados a partir de um arquivo de backup <strong>.json</strong>.
+        Registros já existentes não serão duplicados.
+      </p>
+      <p style="color:#c0392b;font-size:.85rem;margin-bottom:1.25rem">
+        ⚠️ Recomenda-se exportar um backup atual antes de restaurar.
+      </p>
+      <form method="POST" action="{{ url_for('admin.backup_restaurar') }}" enctype="multipart/form-data">
+        <div class="form-group">
+          <label class="form-label">Arquivo de backup (.json)</label>
+          <input type="file" name="arquivo" accept=".json" class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block"
+                onclick="return confirm('Confirma a restauração? Dados novos serão importados.')">
+          ⬆️ Restaurar Dados
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
