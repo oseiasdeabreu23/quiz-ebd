@@ -4,6 +4,7 @@
 
 {% block header_actions %}
 <a href="{{ url_for('admin.quizzes') }}" class="btn btn-ghost">← Voltar</a>
+<a href="{{ url_for('admin.editar_quiz', quiz_id=quiz.id) }}" class="btn btn-primary">✏️ Editar Quiz</a>
 {% endblock %}
 
 {% block admin_content %}

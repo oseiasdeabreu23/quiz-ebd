@@ -697,6 +697,32 @@ def visualizar_quiz(quiz_id):
                            dados=dados, respostas=respostas)
 
 
+@admin_bp.route('/quizzes/<int:quiz_id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_quiz(quiz_id):
+    quiz = Quiz.query.get_or_404(quiz_id)
+    dados = json.loads(quiz.perguntas_json)
+
+    if request.method == 'POST':
+        perguntas = dados['perguntas']
+        for p in perguntas:
+            i = str(p['numero'])
+            p['pergunta'] = request.form.get(f'pergunta_{i}', p['pergunta']).strip()
+            for letra in ['a', 'b', 'c', 'd']:
+                val = request.form.get(f'alt_{i}_{letra}', '').strip()
+                if val:
+                    p['alternativas'][letra] = val
+            correta = request.form.get(f'correta_{i}')
+            if correta in ['a', 'b', 'c', 'd']:
+                p['resposta_correta'] = correta
+        quiz.perguntas_json = json.dumps(dados, ensure_ascii=False)
+        db.session.commit()
+        flash('Quiz atualizado com sucesso!', 'success')
+        return redirect(url_for('admin.visualizar_quiz', quiz_id=quiz_id))
+
+    return render_template('admin/editar_quiz.html', quiz=quiz, dados=dados)
+
+
 @admin_bp.route('/quizzes/<int:quiz_id>/toggle', methods=['POST'])
 @login_required
 def toggle_quiz(quiz_id):
