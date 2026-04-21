@@ -1,0 +1,114 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}{{ quiz.titulo }} — EBD Digital{% endblock %}
+{% block page_title %}{{ quiz.titulo }}{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.quizzes') }}" class="btn btn-ghost">← Voltar</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="two-col">
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Informações</h3>
+      </div>
+      <div class="card-body info-grid">
+        <div><label>Trimestre</label><span>{{ quiz.trimestre.nome_display }}</span></div>
+        <div><label>Nível</label><span class="badge badge-info">{{ quiz.nivel }}</span></div>
+        <div><label>Perguntas</label><span>{{ dados.perguntas|length }}</span></div>
+        <div><label>Respondidos</label><span>{{ respostas|length }}</span></div>
+        <div><label>Status</label>
+          <span class="badge {% if quiz.ativo %}badge-success{% else %}badge-secondary{% endif %}">
+            {{ 'Ativo' if quiz.ativo else 'Inativo' }}
+          </span>
+        </div>
+        <div><label>Criado em</label><span>{{ quiz.created_at.strftime('%d/%m/%Y %H:%M') }}</span></div>
+        {% if quiz.token and quiz.ativo %}
+        <div style="grid-column:1/-1">
+          <label>Link Público</label>
+          <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+            <code style="font-size:.8rem;background:var(--bg);padding:.3rem .6rem;border-radius:6px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              {{ request.host_url }}quiz/{{ quiz.token }}
+            </code>
+            <button class="btn-copy-link" id="btn-copiar"
+                    onclick="copiarLink('{{ request.host_url }}quiz/{{ quiz.token }}', this)">
+              🔗 Copiar
+            </button>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if respostas %}
+    <div class="card">
+      <div class="card-header"><h3>Resultados dos Alunos</h3></div>
+      <div class="card-body p-0">
+        <table class="table">
+          <thead><tr><th>Aluno</th><th>Acertos</th><th>Pontuação</th><th>Data</th></tr></thead>
+          <tbody>
+            {% for r in respostas %}
+            <tr>
+              <td>{{ r.aluno.nome }}</td>
+              <td>{{ r.acertos }}/{{ r.total_perguntas }}</td>
+              <td>
+                <span class="badge {% if r.pontuacao >= 70 %}badge-success{% elif r.pontuacao >= 50 %}badge-warning{% else %}badge-danger{% endif %}">
+                  {{ r.pontuacao }}%
+                </span>
+              </td>
+              <td>{{ r.data_resposta.strftime('%d/%m/%Y') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Perguntas -->
+  <div>
+    <div class="card">
+      <div class="card-header"><h3>Perguntas do Quiz</h3></div>
+      <div class="card-body">
+        {% for p in dados.perguntas %}
+        <div class="pergunta-admin">
+          <div class="perg-header">
+            <span class="perg-num">{{ p.numero }}</span>
+            <p class="perg-texto">{{ p.pergunta }}</p>
+          </div>
+          <div class="perg-alternativas">
+            {% for letra, texto in p.alternativas.items() %}
+            <div class="alt {% if letra == p.resposta_correta %}alt-correta{% endif %}">
+              <span class="alt-letra">{{ letra }})</span> {{ texto }}
+              {% if letra == p.resposta_correta %}
+              <span class="alt-check">✓</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copiarLink(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.classList.add('copiado');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => {
+      btn.classList.remove('copiado');
+      btn.textContent = '🔗 Copiar';
+    }, 2000);
+  }).catch(() => {
+    prompt('Copie o link abaixo:', url);
+  });
+}
+</script>
+{% endblock %}

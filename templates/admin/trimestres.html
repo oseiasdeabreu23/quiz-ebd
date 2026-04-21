@@ -1,0 +1,51 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Trimestres — EBD Digital{% endblock %}
+{% block page_title %}Trimestres{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.novo_trimestre') }}" class="btn btn-primary">+ Novo Trimestre</a>
+{% endblock %}
+
+{% block admin_content %}
+{% if trimestres %}
+<div class="trimestres-grid">
+  {% for t in trimestres %}
+  <div class="tri-card">
+    <div class="tri-header">
+      <h3>{{ t.nome_display }}</h3>
+      <span class="badge badge-info">{{ t.licoes|length }}/13 lições</span>
+    </div>
+    <p class="tri-tema">{{ t.tema }}</p>
+    <div class="tri-progress">
+      <div class="progress-bar">
+        <div class="progress-fill" style="width: {{ (t.licoes|length / 13 * 100)|int }}%"></div>
+      </div>
+      <span>{{ (t.licoes|length / 13 * 100)|int }}%</span>
+    </div>
+    <div class="tri-actions">
+      <a href="{{ url_for('admin.licoes', tri_id=t.id) }}" class="btn btn-secondary">
+        📖 Lições
+      </a>
+      <a href="{{ url_for('admin.gerar_quiz') }}?tri={{ t.id }}" class="btn btn-primary">
+        🤖 Gerar Quiz
+      </a>
+    </div>
+    <div class="tri-actions tri-actions-bottom">
+      <a href="{{ url_for('admin.editar_trimestre', tri_id=t.id) }}" class="btn btn-ghost btn-sm-full">
+        ✏️ Editar
+      </a>
+      <form method="POST" action="{{ url_for('admin.excluir_trimestre', tri_id=t.id) }}"
+            onsubmit="return confirm('Excluir trimestre {{ t.nome_display }}?\n\nIsso também excluirá todas as lições e quizzes vinculados. Esta ação não pode ser desfeita.')">
+        <button type="submit" class="btn btn-danger btn-sm-full">🗑️ Excluir</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Nenhum trimestre cadastrado ainda.</p>
+  <a href="{{ url_for('admin.novo_trimestre') }}" class="btn btn-primary">Criar Primeiro Trimestre</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Entrar — EBD Digital{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-icon">📖</span>
+      <h1>EBD Digital</h1>
+      <p>Escola Bíblica Dominical</p>
+    </div>
+
+    <form method="POST" class="auth-form">
+      <div class="form-group">
+        <label>Número de Matrícula</label>
+        <input type="text" name="matricula"
+               placeholder="EBD-000000"
+               style="text-transform:uppercase; letter-spacing: 2px; font-size: 1.2rem; text-align:center"
+               required autofocus
+               oninput="this.value = this.value.toUpperCase()">
+        <small>Digite sua matrícula no formato EBD-XXXXXX</small>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Acessar</button>
+    </form>
+
+    <div class="auth-footer">
+      <p>Não tem matrícula? Fale com seu professor.</p>
+      <a href="{{ url_for('auth.login_admin') }}">Área Administrativa</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

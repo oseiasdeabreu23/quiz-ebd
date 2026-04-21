@@ -1,0 +1,344 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Gerar Quiz — EBD Digital{% endblock %}
+{% block page_title %}Gerar Quiz com IA{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.quizzes') }}" class="btn btn-ghost">← Voltar</a>
+{% endblock %}
+
+{% block admin_content %}
+
+{% if not cfg.chave_api %}
+<div class="alert alert-warning">
+  ⚠️ <strong>Chave de API não configurada.</strong>
+  <a href="{{ url_for('admin.configuracoes') }}">Clique aqui para configurar</a> antes de gerar quizzes.
+</div>
+{% endif %}
+
+<div class="two-col">
+
+  <!-- ── Esquerda: formulário ── -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3>🤖 Configurar Geração</h3>
+        <div style="display:flex;gap:.5rem;align-items:center;font-size:.8rem;color:var(--text-muted)">
+          <span class="badge badge-info">
+            {{ 'Anthropic' if cfg.provedor == 'anthropic' else 'OpenAI' }} —
+            {{ cfg.modelo_anthropic if cfg.provedor == 'anthropic' else cfg.modelo_openai }}
+          </span>
+          <a href="{{ url_for('admin.configuracoes') }}" class="btn-sm btn-ghost">Alterar</a>
+        </div>
+      </div>
+      <div class="card-body">
+
+        <form method="POST" id="form-quiz" onsubmit="return aoEnviar()">
+
+          <!-- ① ESCOPO ─────────────────────────────────── -->
+          <div class="form-group">
+            <label>Escopo do Quiz</label>
+            <div class="escopo-tabs">
+
+              <label class="escopo-tab active" id="tab-esc-trimestre">
+                <input type="radio" name="escopo" value="trimestre" checked
+                       onchange="mudarEscopo('trimestre')">
+                <span class="escopo-icon">📚</span>
+                <span class="escopo-info">
+                  <strong>Trimestre Completo</strong>
+                  <small>Quiz com todas as 13 lições combinadas</small>
+                </span>
+              </label>
+
+              <label class="escopo-tab" id="tab-esc-licao">
+                <input type="radio" name="escopo" value="licao"
+                       onchange="mudarEscopo('licao')">
+                <span class="escopo-icon">📄</span>
+                <span class="escopo-info">
+                  <strong>Uma Lição</strong>
+                  <small>Quiz focado em uma lição específica</small>
+                </span>
+              </label>
+
+              <label class="escopo-tab" id="tab-esc-todas">
+                <input type="radio" name="escopo" value="todas"
+                       onchange="mudarEscopo('todas')">
+                <span class="escopo-icon">⚡</span>
+                <span class="escopo-info">
+                  <strong>Tudo de Uma Vez</strong>
+                  <small>Gera um quiz para cada lição do trimestre</small>
+                </span>
+              </label>
+
+            </div>
+          </div>
+
+          <!-- ② TRIMESTRE ──────────────────────────────── -->
+          <div class="form-group">
+            <label>Trimestre *</label>
+            <select name="trimestre_id" id="sel-trimestre" required onchange="atualizarTrimestre()">
+              <option value="">Selecionar trimestre...</option>
+              {% for t in trimestres %}
+              <option value="{{ t.id }}"
+                      {% if request.args.get('tri') == t.id|string %}selected{% endif %}>
+                {{ t.nome_display }} — {{ t.tema }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div id="info-trimestre" class="info-box" style="display:none">
+            <span>📖</span>
+            <div>
+              <strong id="info-tema"></strong>
+              <small id="info-licoes"></small>
+            </div>
+          </div>
+
+          <!-- ③ LIÇÃO ESPECÍFICA (só p/ escopo=licao) ──── -->
+          <div id="sec-licao" style="display:none">
+            <div class="form-group">
+              <label>Lição *</label>
+              <select name="licao_numero" id="sel-licao">
+                <option value="">— selecione o trimestre primeiro —</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Questões por lição</label>
+              <select name="num_perguntas_licao" id="sel-num-licao">
+                <option value="5">5 questões</option>
+                <option value="8">8 questões</option>
+                <option value="10" selected>10 questões</option>
+                <option value="15">15 questões</option>
+                <option value="20">20 questões</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ④ TIPO (só p/ escopo=trimestre) ──────────── -->
+          <div id="sec-tipo">
+            <div class="form-group">
+              <label>Quantidade de Questões</label>
+              <div class="tipo-quiz-tabs">
+                <label class="tipo-tab active" id="tab-normal">
+                  <input type="radio" name="tipo" value="normal" checked
+                         onchange="mudarTipo('normal')">
+                  <span>
+                    <strong>📝 Normal — 20 questões</strong>
+                    <small>Quiz padrão do trimestre</small>
+                  </span>
+                </label>
+                <label class="tipo-tab" id="tab-mega">
+                  <input type="radio" name="tipo" value="mega"
+                         onchange="mudarTipo('mega')">
+                  <span>
+                    <strong>🏆 Mega Quiz — 30 questões</strong>
+                    <small>Revisão completa do trimestre</small>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ⑤ AVISO "Tudo de Uma Vez" ─────────────────── -->
+          <div id="sec-todas" style="display:none">
+            <div class="alert alert-info">
+              <strong>⚡ Tudo de Uma Vez</strong><br>
+              O sistema fará <strong id="txt-num-licoes">N</strong> chamadas à IA (uma por lição)
+              e criará <strong id="txt-num-licoes2">N</strong> quizzes com 10 questões cada.<br>
+              <small>Isso pode levar alguns minutos dependendo do número de lições com link.</small>
+            </div>
+          </div>
+
+          <!-- ⑥ NÍVEL ──────────────────────────────────── -->
+          <div class="form-group">
+            <label>Nível das Perguntas</label>
+            <div class="nivel-tabs">
+              <label class="nivel-tab" id="tab-nivel-iniciante">
+                <input type="radio" name="nivel" value="iniciante"
+                       onchange="mudarNivel('iniciante')">
+                <span>🌱 Iniciante</span>
+              </label>
+              <label class="nivel-tab active" id="tab-nivel-intermediario">
+                <input type="radio" name="nivel" value="intermediario" checked
+                       onchange="mudarNivel('intermediario')">
+                <span>📘 Intermediário</span>
+              </label>
+              <label class="nivel-tab" id="tab-nivel-avancado">
+                <input type="radio" name="nivel" value="avancado"
+                       onchange="mudarNivel('avancado')">
+                <span>🎓 Avançado</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- ⑦ TÍTULO ─────────────────────────────────── -->
+          <div class="form-group" id="sec-titulo">
+            <label>Título <span style="color:var(--text-muted);font-weight:400">(opcional)</span></label>
+            <input type="text" name="titulo" id="titulo-input"
+                   placeholder="Deixe em branco para geração automática">
+            <small id="hint-titulo-todas" style="display:none">
+              Os quizzes gerados serão nomeados automaticamente por número e título da lição.
+            </small>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="btn-gerar">
+            🤖 Gerar Quiz com IA
+          </button>
+        </form>
+
+        <!-- Loading -->
+        <div id="loading" style="display:none" class="loading-state">
+          <div class="spinner"></div>
+          <div id="loading-msg">
+            <p>Gerando quiz com IA...</p>
+            <small id="loading-detalhe">Isso pode levar de 30 a 60 segundos.</small>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Direita: prompt editável ── -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3>✏️ Prompt para a IA
+          <span style="font-size:.78rem;font-weight:400;color:var(--text-muted)">(editável)</span>
+        </h3>
+        <button type="button" class="btn-sm btn-ghost" onclick="restaurarPrompt()">↺ Restaurar</button>
+      </div>
+      <div class="card-body" style="padding-top:.75rem">
+        <p class="text-muted" style="font-size:.8rem;margin-bottom:.75rem">
+          Instruções enviadas à IA. Links e formato JSON são adicionados automaticamente.
+          Use <code>{num_perguntas}</code> para a quantidade (preenchida conforme o modo escolhido).
+        </p>
+        <textarea id="prompt-textarea" name="prompt_texto"
+                  form="form-quiz" rows="26"
+                  style="width:100%;font-size:.82rem;font-family:monospace;
+                         padding:.75rem;border:1.5px solid var(--border);
+                         border-radius:8px;resize:vertical;line-height:1.55">{{ cfg.prompt_base }}</textarea>
+        <p style="font-size:.75rem;color:var(--text-muted);margin-top:.5rem">
+          💡 Edições valem só para esta geração.
+          Para salvar como padrão: <a href="{{ url_for('admin.configuracoes') }}">Configurações</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Dados das lições vindos do backend — sem problemas de escaping em atributos HTML
+const TRIMESTRES_DATA = {{ trimestres_data | tojson }};
+const PROMPT_PADRAO   = {{ cfg.prompt_base | tojson }};
+
+let licoesTrimestre = []; // [{numero, titulo, link}, ...]
+
+/* ── Escopo ── */
+function mudarEscopo(escopo) {
+  ['trimestre','licao','todas'].forEach(e => {
+    document.getElementById(`tab-esc-${e}`).classList.toggle('active', e === escopo);
+  });
+  document.getElementById('sec-tipo').style.display  = escopo === 'trimestre' ? 'block' : 'none';
+  document.getElementById('sec-licao').style.display = escopo === 'licao'     ? 'block' : 'none';
+  document.getElementById('sec-todas').style.display = escopo === 'todas'     ? 'block' : 'none';
+
+  const titInput  = document.getElementById('titulo-input');
+  const hintTodas = document.getElementById('hint-titulo-todas');
+  titInput.style.display  = escopo === 'todas' ? 'none'  : 'block';
+  hintTodas.style.display = escopo === 'todas' ? 'block' : 'none';
+
+  atualizarMsgLoading(escopo);
+}
+
+function atualizarMsgLoading(escopo) {
+  const det = document.getElementById('loading-detalhe');
+  if (escopo === 'todas') {
+    const n = licoesTrimestre.filter(l => l.link).length;
+    det.textContent = `Fazendo ${n} chamada(s) à IA, uma por lição. Pode levar alguns minutos.`;
+  } else if (escopo === 'mega') {
+    det.textContent = 'Isso pode levar de 30 a 60 segundos.';
+  } else {
+    det.textContent = 'Isso pode levar de 15 a 30 segundos.';
+  }
+}
+
+/* ── Nível ── */
+function mudarNivel(nivel) {
+  ['iniciante','intermediario','avancado'].forEach(n => {
+    document.getElementById(`tab-nivel-${n}`).classList.toggle('active', n === nivel);
+  });
+}
+
+/* ── Tipo ── */
+function mudarTipo(tipo) {
+  document.getElementById('tab-normal').classList.toggle('active', tipo === 'normal');
+  document.getElementById('tab-mega').classList.toggle('active',   tipo === 'mega');
+}
+
+/* ── Trimestre ── */
+function atualizarTrimestre() {
+  const triId = document.getElementById('sel-trimestre').value;
+  const box   = document.getElementById('info-trimestre');
+
+  if (!triId || !TRIMESTRES_DATA[triId]) { box.style.display = 'none'; return; }
+
+  const tri = TRIMESTRES_DATA[triId];
+  licoesTrimestre = tri.licoes; // [{numero, titulo, link}]
+
+  const comLink = licoesTrimestre.filter(l => l.link).length;
+
+  document.getElementById('info-tema').textContent   = tri.tema;
+  document.getElementById('info-licoes').textContent =
+    `${comLink} de ${licoesTrimestre.length} lição(ões) com link cadastrado`;
+  box.style.display = 'flex';
+
+  // Popular select de lição específica
+  const selLicao = document.getElementById('sel-licao');
+  selLicao.innerHTML = '<option value="">— selecione a lição —</option>';
+  licoesTrimestre.forEach(l => {
+    const op      = document.createElement('option');
+    op.value      = l.numero;
+    op.textContent = `Lição ${l.numero}: ${l.titulo}`;
+    if (!l.link) { op.textContent += ' (sem link)'; op.disabled = true; }
+    selLicao.appendChild(op);
+  });
+
+  // Contagem no aviso "tudo de uma vez"
+  document.getElementById('txt-num-licoes').textContent  = comLink;
+  document.getElementById('txt-num-licoes2').textContent = comLink;
+
+  const escopoAtivo = document.querySelector('input[name="escopo"]:checked').value;
+  atualizarMsgLoading(escopoAtivo);
+}
+
+/* ── Prompt ── */
+function restaurarPrompt() {
+  if (confirm('Restaurar o prompt padrão? As edições atuais serão perdidas.')) {
+    document.getElementById('prompt-textarea').value = PROMPT_PADRAO;
+  }
+}
+
+/* ── Submit ── */
+function aoEnviar() {
+  if (!document.getElementById('sel-trimestre').value) {
+    alert('Selecione um trimestre.'); return false;
+  }
+  const escopo = document.querySelector('input[name="escopo"]:checked').value;
+  if (escopo === 'licao' && !document.getElementById('sel-licao').value) {
+    alert('Selecione a lição.'); return false;
+  }
+  document.getElementById('form-quiz').style.display = 'none';
+  document.getElementById('loading').style.display   = 'flex';
+  return true;
+}
+
+/* ── Init ── */
+window.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('sel-trimestre').value) atualizarTrimestre();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "pub/base_pub.html" %}
+{% block title %}Resultado — {{ quiz.titulo }} — EBD Digital{% endblock %}
+
+{% block content %}
+<div class="pub-resultado-page">
+
+  <!-- Placar principal -->
+  {% set pct = resposta.pontuacao | int %}
+  <div class="pub-placar-card
+    {% if pct >= 80 %}placar-ouro
+    {% elif pct >= 60 %}placar-prata
+    {% else %}placar-bronze{% endif %}">
+    <div class="placar-emoji">
+      {% if pct >= 80 %}🏆{% elif pct >= 60 %}🎖{% else %}📚{% endif %}
+    </div>
+    <div class="placar-pontuacao">{{ resposta.pontuacao }}%</div>
+    <div class="placar-acertos">{{ resposta.acertos }} de {{ resposta.total_perguntas }} acertos</div>
+    <div class="placar-nome">{{ aluno.nome }}</div>
+    <div class="placar-msg">
+      {% if pct >= 80 %}Excelente! Você domina o conteúdo!
+      {% elif pct >= 60 %}Bom trabalho! Continue estudando!
+      {% else %}Continue se dedicando aos estudos!{% endif %}
+    </div>
+  </div>
+
+  <!-- Evolução dos últimos quizzes -->
+  {% if historico | length > 1 %}
+  <div class="pub-card pub-evolucao-card">
+    <h3>Sua Evolução</h3>
+    <div class="evolucao-chart">
+      {% for r in historico %}
+      {% set h_pct = r.pontuacao | int %}
+      <div class="evolucao-bar-wrap {% if r.id == resposta.id %}atual{% endif %}">
+        <div class="evolucao-bar-label">{{ h_pct }}%</div>
+        <div class="evolucao-bar-container">
+          <div class="evolucao-bar
+            {% if h_pct >= 80 %}bar-ouro
+            {% elif h_pct >= 60 %}bar-prata
+            {% else %}bar-bronze{% endif %}"
+            style="height: {{ [h_pct, 5] | max }}%"
+            title="{{ r.pontuacao }}% — {{ r.quiz.titulo if r.quiz else '' }}">
+          </div>
+        </div>
+        <div class="evolucao-bar-num">Q{{ loop.index }}</div>
+        {% if r.id == resposta.id %}
+        <div class="evolucao-atual-badge">atual</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <p class="evolucao-legenda">Últimos {{ historico | length }} quiz(zes) realizados</p>
+  </div>
+  {% endif %}
+
+  <!-- Gabarito detalhado -->
+  <div class="pub-card">
+    <h3>Gabarito Detalhado</h3>
+    <div class="gabarito-lista">
+      {% for p in dados.perguntas %}
+      {% set num = p.numero | string %}
+      {% set resp_aluno = respostas_aluno.get(num, '') %}
+      {% set correta = p.resposta_correta %}
+      {% set acertou = resp_aluno == correta %}
+      <div class="gabarito-item {% if acertou %}gabarito-certo{% else %}gabarito-errado{% endif %}">
+        <div class="gabarito-header">
+          <span class="gabarito-icone">{% if acertou %}✅{% else %}❌{% endif %}</span>
+          <span class="gabarito-num">{{ loop.index }}.</span>
+          <span class="gabarito-pergunta">{{ p.pergunta }}</span>
+        </div>
+
+        <div class="gabarito-alternativas">
+          {% for letra in ['a', 'b', 'c', 'd'] %}
+          {% if p.alternativas[letra] is defined %}
+          <div class="gabarito-alt
+            {% if letra == correta %}alt-correta{% endif %}
+            {% if letra == resp_aluno and not acertou %}alt-errada{% endif %}">
+            <span class="alt-letra">{{ letra }})</span>
+            <span class="alt-texto">{{ p.alternativas[letra] }}</span>
+            {% if letra == correta %}
+            <span class="alt-tag tag-certa">✓ Correta</span>
+            {% elif letra == resp_aluno and not acertou %}
+            <span class="alt-tag tag-errada">✗ Sua resposta</span>
+            {% endif %}
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        {% if not acertou and resp_aluno == '' %}
+        <div class="gabarito-sem-resp">Questão não respondida</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Histórico resumido + convite para matrícula -->
+  <div class="pub-card pub-matricula-card">
+    <div class="pub-matricula-header">
+      <div class="pub-matricula-badge">
+        <span class="pub-matricula-label">Sua Matrícula</span>
+        <span class="pub-matricula-num">{{ aluno.matricula }}</span>
+      </div>
+      <p class="pub-matricula-dica">
+        Guarde sua matrícula! Com ela você acessa o painel completo e acompanha todos os seus quizzes.
+      </p>
+    </div>
+
+    {% if historico | length > 1 %}
+    <div class="pub-historico-resumo">
+      <h4>Seus últimos quizzes</h4>
+      <div class="pub-historico-lista">
+        {% for r in historico %}
+        {% set h_pct = r.pontuacao %}
+        <div class="pub-hist-item {% if r.id == resposta.id %}hist-atual{% endif %}">
+          <div class="pub-hist-info">
+            <span class="pub-hist-titulo">{{ r.quiz.titulo if r.quiz else 'Quiz' }}</span>
+            <span class="pub-hist-data">{{ r.data_resposta.strftime('%d/%m/%Y') }}</span>
+          </div>
+          <div class="pub-hist-score">
+            <span class="pub-hist-acertos">{{ r.acertos }}/{{ r.total_perguntas }}</span>
+            <span class="pub-hist-pct
+              {% if h_pct >= 80 %}pct-ouro
+              {% elif h_pct >= 60 %}pct-prata
+              {% else %}pct-bronze{% endif %}">
+              {{ h_pct }}%
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="pub-matricula-acesso">
+      <p>Entre com sua matrícula para ver <strong>todos os quizzes</strong> que você já participou:</p>
+      <a href="{{ url_for('auth.login_aluno') }}" class="btn btn-primary btn-block">
+        Entrar com Matrícula →
+      </a>
+    </div>
+  </div>
+
+  <!-- Imprimir -->
+  <div class="pub-acoes">
+    <button onclick="window.print()" class="btn btn-outline">
+      🖨 Imprimir resultado
+    </button>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+@media print {
+  .pub-header, .pub-footer, .pub-acoes { display: none !important; }
+  .pub-resultado-page { padding: 0; }
+  .pub-card { box-shadow: none; border: 1px solid #ddd; }
+}
+</style>
+{% endblock %}

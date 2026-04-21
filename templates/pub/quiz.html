@@ -1,0 +1,197 @@
+{% extends "pub/base_pub.html" %}
+{% block title %}{{ quiz.titulo }} — EBD Digital{% endblock %}
+
+{% block content %}
+<div class="pub-quiz-page">
+
+  <!-- Cabeçalho fixo do quiz -->
+  <div class="pub-quiz-header">
+    <div class="pub-quiz-header-inner">
+      <div>
+        <span class="pub-nivel nivel-{{ quiz.nivel }}">{{ quiz.nivel }}</span>
+        <h2>{{ quiz.titulo }}</h2>
+      </div>
+      <div class="pub-progresso-wrap">
+        <span id="progresso-txt">1 / {{ dados.perguntas | length }}</span>
+        <div class="pub-progresso-bar">
+          <div class="pub-progresso-fill" id="barra-progresso"
+               style="width:{{ (1 / (dados.perguntas | length) * 100) | round(1) }}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulário do quiz -->
+  <form method="POST" action="{{ url_for('pub.enviar', token=token) }}" id="form-quiz">
+
+    {% for p in dados.perguntas %}
+    <div class="pub-pergunta-card {% if not loop.first %}pub-hidden{% endif %}"
+         id="card-{{ loop.index }}" data-index="{{ loop.index }}">
+
+      <div class="pub-pergunta-num">Questão {{ loop.index }} de {{ dados.perguntas | length }}</div>
+      <p class="pub-pergunta-texto">{{ p.pergunta }}</p>
+
+      <div class="pub-alternativas">
+        {% for letra in ['a', 'b', 'c', 'd'] %}
+        {% if p.alternativas[letra] is defined %}
+        <label class="pub-alt">
+          <input type="radio" name="q{{ p.numero }}" value="{{ letra }}" required
+                 onchange="marcarAlternativa(this)">
+          <span class="pub-alt-letra">{{ letra }})</span>
+          <span class="pub-alt-texto">{{ p.alternativas[letra] }}</span>
+        </label>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="pub-nav-btns">
+        {% if not loop.first %}
+        <button type="button" class="btn btn-outline" onclick="irPara({{ loop.index - 1 }})">
+          ← Anterior
+        </button>
+        {% else %}
+        <span></span>
+        {% endif %}
+
+        {% if not loop.last %}
+        <button type="button" class="btn btn-primary" id="btn-prox-{{ loop.index }}"
+                onclick="irPara({{ loop.index + 1 }})" disabled>
+          Próxima →
+        </button>
+        {% else %}
+        <button type="button" class="btn btn-success" id="btn-enviar"
+                onclick="confirmarEnvio()" disabled>
+          Finalizar Quiz ✓
+        </button>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Painel de revisão (antes de enviar) -->
+    <div class="pub-revisao-card pub-hidden" id="card-revisao">
+      <h3>Revisar Respostas</h3>
+      <p style="color:var(--text-muted);margin-bottom:1.5rem">
+        Verifique suas respostas antes de enviar. Após o envio não é possível alterar.
+      </p>
+      <div class="pub-revisao-grid" id="revisao-grid"></div>
+      <div class="pub-nav-btns" style="margin-top:2rem">
+        <button type="button" class="btn btn-outline"
+                onclick="irPara({{ dados.perguntas | length }})">
+          ← Voltar
+        </button>
+        <button type="submit" class="btn btn-success btn-lg">
+          Enviar Respostas →
+        </button>
+      </div>
+    </div>
+
+  </form>
+
+  <!-- Mini mapa de questões -->
+  <div class="pub-mapa">
+    {% for p in dados.perguntas %}
+    <button type="button" class="pub-mapa-btn" id="mapa-{{ loop.index }}"
+            onclick="irPara({{ loop.index }})" title="Questão {{ loop.index }}">
+      {{ loop.index }}
+    </button>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const TOTAL = {{ dados.perguntas | length }};
+let respostas = {};   // { indice: letra }
+let atual = 1;
+
+function irPara(n) {
+  if (n > TOTAL + 1) return;
+
+  // Esconder atual
+  document.getElementById('card-' + atual)?.classList.add('pub-hidden');
+  document.getElementById('card-revisao')?.classList.add('pub-hidden');
+
+  atual = n;
+
+  if (n === TOTAL + 1) {
+    // Mostrar revisão
+    montarRevisao();
+    document.getElementById('card-revisao').classList.remove('pub-hidden');
+  } else {
+    document.getElementById('card-' + n).classList.remove('pub-hidden');
+  }
+  atualizarProgresso();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function marcarAlternativa(radio) {
+  const card = radio.closest('.pub-pergunta-card');
+  const idx = parseInt(card.dataset.index);
+  respostas[idx] = radio.value;
+
+  // Destacar alternativa selecionada
+  card.querySelectorAll('.pub-alt').forEach(el => el.classList.remove('pub-alt-selecionada'));
+  radio.closest('.pub-alt').classList.add('pub-alt-selecionada');
+
+  // Habilitar botão próxima/enviar
+  const btnProx = document.getElementById('btn-prox-' + idx);
+  const btnEnviar = document.getElementById('btn-enviar');
+  if (btnProx) btnProx.disabled = false;
+  if (btnEnviar) btnEnviar.disabled = false;
+
+  // Atualizar mapa
+  const mapaBt = document.getElementById('mapa-' + idx);
+  if (mapaBt) mapaBt.classList.add('respondida');
+}
+
+function atualizarProgresso() {
+  const respondidas = Object.keys(respostas).length;
+  const p = Math.max(respondidas, atual - 1);
+  const pct = Math.min((p / TOTAL) * 100, 100);
+  document.getElementById('barra-progresso').style.width = pct + '%';
+  if (atual <= TOTAL) {
+    document.getElementById('progresso-txt').textContent = atual + ' / ' + TOTAL;
+  } else {
+    document.getElementById('progresso-txt').textContent = 'Revisão';
+  }
+}
+
+function montarRevisao() {
+  const grid = document.getElementById('revisao-grid');
+  grid.innerHTML = '';
+  for (let i = 1; i <= TOTAL; i++) {
+    const resp = respostas[i];
+    const div = document.createElement('div');
+    div.className = 'pub-revisao-item' + (resp ? ' respondida' : ' pendente');
+    div.innerHTML = `<span class="rv-num">${i}</span>
+                     <span class="rv-resp">${resp ? resp.toUpperCase() : '—'}</span>`;
+    div.onclick = () => irPara(i);
+    grid.appendChild(div);
+  }
+}
+
+function confirmarEnvio() {
+  const pendentes = TOTAL - Object.keys(respostas).length;
+  if (pendentes > 0) {
+    if (!confirm(`Você ainda tem ${pendentes} questão(ões) sem resposta. Deseja revisar antes de enviar?`)) return;
+  }
+  irPara(TOTAL + 1);
+}
+
+// Restaurar estado se radio já marcado (back button)
+document.querySelectorAll('input[type=radio]:checked').forEach(r => {
+  const card = r.closest('.pub-pergunta-card');
+  if (card) {
+    const idx = parseInt(card.dataset.index);
+    respostas[idx] = r.value;
+    r.closest('.pub-alt').classList.add('pub-alt-selecionada');
+    document.getElementById('mapa-' + idx)?.classList.add('respondida');
+  }
+});
+
+atualizarProgresso();
+</script>
+{% endblock %}

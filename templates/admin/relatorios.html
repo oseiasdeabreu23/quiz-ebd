@@ -1,0 +1,55 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Relatórios — EBD Digital{% endblock %}
+{% block page_title %}Relatórios{% endblock %}
+
+{% block admin_content %}
+<div class="card">
+  <div class="card-header"><h3>🏆 Ranking de Alunos (Top 10)</h3></div>
+  <div class="card-body p-0">
+    {% if ranking %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Aluno</th>
+          <th>Classe</th>
+          <th>Igreja</th>
+          <th>Quizzes</th>
+          <th>Média</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for aluno, media, total in ranking %}
+        <tr>
+          <td>
+            {% if loop.index == 1 %}🥇
+            {% elif loop.index == 2 %}🥈
+            {% elif loop.index == 3 %}🥉
+            {% else %}{{ loop.index }}
+            {% endif %}
+          </td>
+          <td><strong>{{ aluno.nome }}</strong><br><small><code>{{ aluno.matricula }}</code></small></td>
+          <td>{{ aluno.classe or '—' }}</td>
+          <td>{{ aluno.igreja or '—' }}</td>
+          <td>{{ total }}</td>
+          <td>
+            <span class="badge {% if media >= 70 %}badge-success{% elif media >= 50 %}badge-warning{% else %}badge-danger{% endif %}">
+              {{ "%.1f"|format(media) }}%
+            </span>
+          </td>
+          <td>
+            <a href="{{ url_for('admin.desempenho_aluno', aluno_id=aluno.id) }}" class="btn-sm btn-info">Ver</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>Ainda não há quizzes respondidos para gerar ranking.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

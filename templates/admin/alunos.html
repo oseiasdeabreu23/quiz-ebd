@@ -1,0 +1,82 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Alunos — EBD Digital{% endblock %}
+{% block page_title %}Alunos{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.novo_aluno') }}" class="btn btn-primary">+ Novo Aluno</a>
+{% endblock %}
+
+{% block admin_content %}
+<!-- Filtros -->
+<div class="card">
+  <div class="card-body">
+    <form method="GET" class="filter-form">
+      <input type="text" name="busca" value="{{ busca }}"
+             placeholder="Buscar por nome ou matrícula...">
+      <select name="classe">
+        <option value="">Todas as classes</option>
+        {% for c in classes %}
+        <option value="{{ c }}" {% if c == classe_sel %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-secondary">Filtrar</button>
+      <a href="{{ url_for('admin.alunos') }}" class="btn btn-ghost">Limpar</a>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if alunos %}
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Matrícula</th>
+          <th>Nome</th>
+          <th>Classe</th>
+          <th>Igreja</th>
+          <th>Telefone</th>
+          <th>Quizzes</th>
+          <th>Média</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in alunos %}
+        <tr>
+          <td><code>{{ a.matricula }}</code></td>
+          <td><strong>{{ a.nome }}</strong></td>
+          <td>{{ a.classe or '—' }}</td>
+          <td>{{ a.igreja or '—' }}</td>
+          <td>{{ a.telefone or '—' }}</td>
+          <td>{{ a.respostas|length }}</td>
+          <td>
+            {% if a.media_geral > 0 %}
+              <span class="badge {% if a.media_geral >= 70 %}badge-success{% elif a.media_geral >= 50 %}badge-warning{% else %}badge-danger{% endif %}">
+                {{ a.media_geral }}%
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="actions">
+            <a href="{{ url_for('admin.desempenho_aluno', aluno_id=a.id) }}" class="btn-sm btn-info">Ver</a>
+            <a href="{{ url_for('admin.editar_aluno', aluno_id=a.id) }}" class="btn-sm btn-secondary">Editar</a>
+            <form method="POST"
+                  action="{{ url_for('admin.desativar_aluno', aluno_id=a.id) }}"
+                  style="display:inline"
+                  onsubmit="return confirm('Desativar aluno?')">
+              <button type="submit" class="btn-sm btn-danger">Desativar</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <p>Nenhum aluno encontrado.</p>
+      <a href="{{ url_for('admin.novo_aluno') }}" class="btn btn-primary">Cadastrar primeiro aluno</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

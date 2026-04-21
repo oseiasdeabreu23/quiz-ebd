@@ -1,0 +1,107 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Desempenho — EBD Digital{% endblock %}
+{% block page_title %}Desempenho: {{ aluno.nome }}{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.alunos') }}" class="btn btn-ghost">← Voltar</a>
+{% endblock %}
+
+{% block admin_content %}
+<!-- Info do aluno -->
+<div class="card">
+  <div class="card-body info-grid">
+    <div><label>Matrícula</label><code>{{ aluno.matricula }}</code></div>
+    <div><label>Classe</label><span>{{ aluno.classe or '—' }}</span></div>
+    <div><label>Igreja</label><span>{{ aluno.igreja or '—' }}</span></div>
+    <div><label>Telefone</label><span>{{ aluno.telefone or '—' }}</span></div>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon">📝</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ respostas|length }}</span>
+      <span class="stat-label">Quizzes Feitos</span>
+    </div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon">🎯</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ aluno.media_geral }}%</span>
+      <span class="stat-label">Média Geral</span>
+    </div>
+  </div>
+  <div class="stat-card stat-purple">
+    <div class="stat-icon">✅</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ aluno.total_acertos }}</span>
+      <span class="stat-label">Total de Acertos</span>
+    </div>
+  </div>
+  <div class="stat-card stat-orange">
+    <div class="stat-icon">🔥</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ desafios|length }}</span>
+      <span class="stat-label">Dias de Desafio</span>
+    </div>
+  </div>
+</div>
+
+<!-- Histórico de quizzes -->
+<div class="card">
+  <div class="card-header"><h3>Histórico de Quizzes</h3></div>
+  <div class="card-body p-0">
+    {% if respostas %}
+    <table class="table">
+      <thead>
+        <tr><th>Quiz</th><th>Trimestre</th><th>Acertos</th><th>Pontuação</th><th>Data</th></tr>
+      </thead>
+      <tbody>
+        {% for r in respostas %}
+        <tr>
+          <td>{{ r.quiz.titulo }}</td>
+          <td>{{ r.quiz.trimestre.nome_display }}</td>
+          <td>{{ r.acertos }}/{{ r.total_perguntas }}</td>
+          <td>
+            <span class="badge {% if r.pontuacao >= 70 %}badge-success{% elif r.pontuacao >= 50 %}badge-warning{% else %}badge-danger{% endif %}">
+              {{ r.pontuacao }}%
+            </span>
+          </td>
+          <td>{{ r.data_resposta.strftime('%d/%m/%Y %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><p>Nenhum quiz respondido ainda.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Desafios recentes -->
+<div class="card">
+  <div class="card-header"><h3>Desafios Recentes</h3></div>
+  <div class="card-body">
+    {% if desafios %}
+    <div class="desafios-grid">
+      {% for d in desafios %}
+      <div class="desafio-day">
+        <span class="day-date">{{ d.data.strftime('%d/%m') }}</span>
+        <div class="day-marks">
+          <span title="Leitura" class="{% if d.leitura %}mark-ok{% else %}mark-no{% endif %}">📖</span>
+          <span title="Oração" class="{% if d.oracao %}mark-ok{% else %}mark-no{% endif %}">🙏</span>
+          <span title="Culto" class="{% if d.culto %}mark-ok{% else %}mark-no{% endif %}">⛪</span>
+          <span title="Meditação" class="{% if d.meditacao %}mark-ok{% else %}mark-no{% endif %}">💭</span>
+        </div>
+        <span class="day-score">{{ d.total_marcado }}/4</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-muted">Sem registros de desafios.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

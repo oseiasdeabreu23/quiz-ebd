@@ -1,0 +1,106 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Quizzes — EBD Digital{% endblock %}
+{% block page_title %}Quizzes{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.gerar_quiz') }}" class="btn btn-primary">🤖 Gerar Novo Quiz</a>
+{% endblock %}
+
+{% block admin_content %}
+{% if quizzes %}
+<div class="card">
+  <div class="card-body p-0">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Trimestre</th>
+          <th>Tipo</th>
+          <th>Nível</th>
+          <th>Perguntas</th>
+          <th>Respondidos</th>
+          <th>Status</th>
+          <th>Criado em</th>
+          <th>Link Público</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in quizzes %}
+        {% set dados = q.perguntas_json|fromjson %}
+        <tr>
+          <td>
+            <strong>{{ q.titulo }}</strong>
+            {% if q.escopo == 'licao' and q.licao %}
+            <br><small style="color:var(--text-muted)">Lição {{ q.licao.numero }}</small>
+            {% endif %}
+          </td>
+          <td>{{ q.trimestre.nome_display }}</td>
+          <td>
+            {% if q.escopo == 'licao' %}
+            <span class="badge badge-purple">📄 Por Lição</span>
+            {% elif q.tipo == 'mega' %}
+            <span class="badge badge-warning">🏆 Mega Quiz</span>
+            {% else %}
+            <span class="badge badge-secondary">📚 Trimestre</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge badge-info">{{ q.nivel }}</span>
+          </td>
+          <td>{{ dados.perguntas|length if dados.perguntas else '—' }}</td>
+          <td>{{ q.respostas|length }}</td>
+          <td>
+            <span class="badge {% if q.ativo %}badge-success{% else %}badge-secondary{% endif %}">
+              {{ 'Ativo' if q.ativo else 'Inativo' }}
+            </span>
+          </td>
+          <td>{{ q.created_at.strftime('%d/%m/%Y') }}</td>
+          <td class="share-link-cell">
+            {% if q.token and q.ativo %}
+            <button class="btn-copy-link"
+                    onclick="copiarLink('{{ request.host_url }}quiz/{{ q.token }}', this)">
+              🔗 Copiar Link
+            </button>
+            {% else %}
+            <span style="color:var(--text-muted);font-size:.8rem">—</span>
+            {% endif %}
+          </td>
+          <td class="actions">
+            <a href="{{ url_for('admin.visualizar_quiz', quiz_id=q.id) }}" class="btn-sm btn-info">Ver</a>
+            <form method="POST" action="{{ url_for('admin.toggle_quiz', quiz_id=q.id) }}" style="display:inline">
+              <button type="submit" class="btn-sm {% if q.ativo %}btn-warning{% else %}btn-success{% endif %}">
+                {{ 'Desativar' if q.ativo else 'Ativar' }}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <p>Nenhum quiz criado ainda.</p>
+  <a href="{{ url_for('admin.gerar_quiz') }}" class="btn btn-primary">🤖 Gerar Primeiro Quiz</a>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copiarLink(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    btn.classList.add('copiado');
+    btn.textContent = '✓ Copiado!';
+    setTimeout(() => {
+      btn.classList.remove('copiado');
+      btn.textContent = '🔗 Copiar Link';
+    }, 2000);
+  }).catch(() => {
+    prompt('Copie o link abaixo:', url);
+  });
+}
+</script>
+{% endblock %}

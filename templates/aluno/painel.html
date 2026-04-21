@@ -1,0 +1,124 @@
+{% extends "aluno/base_aluno.html" %}
+{% block title %}Painel — EBD Digital{% endblock %}
+
+{% block aluno_content %}
+<div class="painel-container">
+
+  <!-- Boas-vindas -->
+  <div class="welcome-banner">
+    <div>
+      <h2>Olá, {{ aluno.nome.split()[0] }}! 👋</h2>
+      <p>Matrícula: <strong>{{ aluno.matricula }}</strong> · Classe: {{ aluno.classe or 'N/A' }}</p>
+    </div>
+    {% if streak > 0 %}
+    <div class="streak-badge">
+      <span class="streak-fire">🔥</span>
+      <strong>{{ streak }}</strong>
+      <small>dias seguidos</small>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Stats do aluno -->
+  <div class="aluno-stats">
+    <div class="a-stat">
+      <span class="a-stat-val">{{ respostas|length }}</span>
+      <span class="a-stat-lbl">Quizzes Feitos</span>
+    </div>
+    <div class="a-stat">
+      <span class="a-stat-val">{{ aluno.media_geral }}%</span>
+      <span class="a-stat-lbl">Média Geral</span>
+    </div>
+    <div class="a-stat">
+      <span class="a-stat-val">{{ aluno.total_acertos }}</span>
+      <span class="a-stat-lbl">Total Acertos</span>
+    </div>
+    <div class="a-stat">
+      <span class="a-stat-val">{{ streak }}</span>
+      <span class="a-stat-lbl">Dias Seguidos</span>
+    </div>
+  </div>
+
+  <div class="painel-grid">
+
+    <!-- Quizzes disponíveis -->
+    <section>
+      <h3 class="section-title">📝 Quizzes Disponíveis</h3>
+      {% if quizzes_disponiveis %}
+      <div class="quiz-cards">
+        {% for q in quizzes_disponiveis %}
+        <div class="quiz-card">
+          <div class="quiz-card-header">
+            <span class="quiz-nivel nivel-{{ q.nivel }}">{{ q.nivel }}</span>
+            <h4>{{ q.titulo }}</h4>
+            <p>{{ q.trimestre.nome_display }}</p>
+          </div>
+          <div class="quiz-card-footer">
+            <span>20 perguntas</span>
+            <a href="{{ url_for('aluno.ver_quiz', quiz_id=q.id) }}" class="btn btn-primary">
+              Responder →
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-card">
+        <p>🎉 Você respondeu todos os quizzes disponíveis!</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- Histórico -->
+    <section>
+      <h3 class="section-title">📊 Histórico de Quizzes</h3>
+      {% if respostas %}
+      <div class="historico-list">
+        {% for r in respostas[:10] %}
+        <div class="hist-item">
+          <div class="hist-info">
+            <strong>{{ r.quiz.titulo }}</strong>
+            <small>{{ r.data_resposta.strftime('%d/%m/%Y') }}</small>
+          </div>
+          <div class="hist-score">
+            <div class="score-bar-container">
+              <div class="score-bar" style="width: {{ r.pontuacao }}%;
+                background: {% if r.pontuacao >= 70 %}#22c55e{% elif r.pontuacao >= 50 %}#f59e0b{% else %}#ef4444{% endif %}">
+              </div>
+            </div>
+            <span class="score-label {% if r.pontuacao >= 70 %}text-green{% elif r.pontuacao >= 50 %}text-yellow{% else %}text-red{% endif %}">
+              {{ r.acertos }}/{{ r.total_perguntas }} · {{ r.pontuacao }}%
+            </span>
+          </div>
+          <a href="{{ url_for('aluno.resultado_quiz', quiz_id=r.quiz_id) }}" class="btn-sm btn-ghost">Ver</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-card">
+        <p>Nenhum quiz respondido ainda. Comece agora!</p>
+      </div>
+      {% endif %}
+    </section>
+
+  </div>
+
+  <!-- Desafio de hoje (mini) -->
+  <div class="desafio-mini">
+    <h3>🔥 Desafio de Hoje</h3>
+    {% if desafio_hoje %}
+    <div class="desafio-mini-marks">
+      <span class="{% if desafio_hoje.leitura %}mark-done{% else %}mark-pending{% endif %}">📖 Leitura</span>
+      <span class="{% if desafio_hoje.oracao %}mark-done{% else %}mark-pending{% endif %}">🙏 Oração</span>
+      <span class="{% if desafio_hoje.culto %}mark-done{% else %}mark-pending{% endif %}">⛪ Culto</span>
+      <span class="{% if desafio_hoje.meditacao %}mark-done{% else %}mark-pending{% endif %}">💭 Meditação</span>
+    </div>
+    <p>{{ desafio_hoje.total_marcado }}/4 concluídos</p>
+    {% else %}
+    <p>Você ainda não marcou seus desafios hoje.</p>
+    {% endif %}
+    <a href="{{ url_for('aluno.desafios') }}" class="btn btn-secondary">Marcar Desafios →</a>
+  </div>
+
+</div>
+{% endblock %}

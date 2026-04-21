@@ -1,0 +1,47 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Lições — EBD Digital{% endblock %}
+{% block page_title %}Lições: {{ trimestre.nome_display }}{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.trimestres') }}" class="btn btn-ghost">← Voltar</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h3>{{ trimestre.tema }}</h3>
+      <small>Preencha título e link para cada uma das 13 lições do trimestre.</small>
+    </div>
+  </div>
+  <div class="card-body">
+    <form method="POST" id="form-licoes">
+      <div class="licoes-list">
+        {% for i in range13 %}
+        {% set licao = licoes_map.get(i) %}
+        <div class="licao-item">
+          <div class="licao-numero">
+            <span>{{ i }}</span>
+          </div>
+          <div class="licao-fields">
+            <input type="text" name="titulo_{{ i }}"
+                   value="{{ licao.titulo if licao else '' }}"
+                   placeholder="Título da lição {{ i }}" class="licao-titulo">
+            <input type="url" name="link_{{ i }}"
+                   value="{{ licao.link if licao else '' }}"
+                   placeholder="https://..." class="licao-link">
+          </div>
+          {% if licao and licao.link %}
+          <a href="{{ licao.link }}" target="_blank" class="btn-sm btn-ghost" title="Abrir link">↗</a>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <div class="form-actions mt-4">
+        <button type="submit" class="btn btn-primary">Salvar Lições</button>
+        <a href="{{ url_for('admin.gerar_quiz') }}" class="btn btn-secondary">🤖 Gerar Quiz</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

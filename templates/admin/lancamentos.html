@@ -1,0 +1,262 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Lançar Pontuações — EBD Digital{% endblock %}
+{% block page_title %}Lançar Pontuações{% endblock %}
+
+{% block admin_content %}
+<div class="two-col" style="align-items: flex-start;">
+
+  <!-- ── Formulário de lançamento ── -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Lançar resultado manualmente</h3>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1.25rem">
+          Use para registrar pontuações de quizzes respondidos em papel ou de lições anteriores ao sistema.
+          Se o aluno já tiver um resultado lançado no mesmo quiz, ele será <strong>atualizado</strong>.
+        </p>
+
+        <form method="POST" action="{{ url_for('admin.salvar_lancamento') }}" id="form-lancamento">
+
+          <!-- Aluno -->
+          <div class="form-group">
+            <label>Aluno *</label>
+            <div class="search-wrapper" style="position:relative">
+              <input type="text" id="input-busca-aluno" placeholder="Digite o nome para buscar..."
+                     autocomplete="off" oninput="buscarAlunos(this.value)">
+              <span class="search-icon">🔍</span>
+              <div id="lista-alunos" class="lista-resultados" style="display:none;position:absolute;z-index:99;width:100%"></div>
+            </div>
+            <input type="hidden" name="aluno_id" id="campo-aluno-id" required>
+            <div id="aluno-selecionado" style="display:none;margin-top:.5rem">
+              <div class="aluno-tag">
+                <span id="aluno-tag-nome"></span>
+                <span id="aluno-tag-mat" style="font-size:.8rem;color:var(--text-muted)"></span>
+                <button type="button" onclick="limparAluno()" class="btn-dessel-inline">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trimestre → Quiz (cascata via JS) -->
+          <div class="form-group">
+            <label>Trimestre *</label>
+            <select id="sel-trimestre" onchange="carregarQuizzes(this.value)">
+              <option value="">Selecionar trimestre...</option>
+              {% for t in trimestres %}
+              <option value="{{ t.id }}">{{ t.nome_display }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Quiz *</label>
+            <select name="quiz_id" id="sel-quiz" required onchange="preencherTotal(this)">
+              <option value="">Selecione um trimestre primeiro...</option>
+            </select>
+          </div>
+
+          <!-- Acertos / Total -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Acertos *</label>
+              <input type="number" name="acertos" id="campo-acertos"
+                     min="0" placeholder="Ex: 14" required
+                     oninput="atualizarCalculo()">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Total de questões *</label>
+              <input type="number" name="total_perguntas" id="campo-total"
+                     min="1" placeholder="Ex: 20" required
+                     oninput="atualizarCalculo()">
+            </div>
+          </div>
+
+          <!-- Cálculo automático -->
+          <div id="preview-calculo" style="display:none;
+               margin:.875rem 0;padding:.75rem 1rem;border-radius:8px;
+               background:var(--primary-light);border:1.5px solid var(--primary);
+               font-size:.9rem;display:flex;gap:1.5rem;flex-wrap:wrap">
+            <span>✅ Acertos: <strong id="calc-acertos">—</strong></span>
+            <span>❌ Erros: <strong id="calc-erros">—</strong></span>
+            <span>📊 Pontuação: <strong id="calc-pct">—</strong></span>
+          </div>
+
+          <!-- Data (opcional) -->
+          <div class="form-group">
+            <label>Data de realização <span style="color:var(--text-muted)">(opcional — padrão: hoje)</span></label>
+            <input type="date" name="data_resposta" id="campo-data"
+                   value="{{ now.strftime('%Y-%m-%d') }}">
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block">
+            Lançar Pontuação →
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Lançamentos recentes ── -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3>Lançamentos manuais recentes</h3>
+      </div>
+      {% if recentes %}
+      <div class="card-body p-0">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Aluno</th>
+              <th>Quiz</th>
+              <th>Resultado</th>
+              <th>Data</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recentes %}
+            <tr>
+              <td>
+                <strong>{{ r.aluno.nome }}</strong>
+                <br><small style="color:var(--text-muted)">{{ r.aluno.matricula }}</small>
+              </td>
+              <td style="font-size:.85rem">{{ r.quiz.titulo if r.quiz else '—' }}</td>
+              <td>
+                <span style="font-size:.9rem">{{ r.acertos }}/{{ r.total_perguntas }}</span>
+                <span class="badge {% if r.pontuacao >= 70 %}badge-success{% elif r.pontuacao >= 50 %}badge-warning{% else %}badge-danger{% endif %}"
+                      style="margin-left:.375rem">{{ r.pontuacao }}%</span>
+              </td>
+              <td style="font-size:.8rem;color:var(--text-muted)">
+                {{ r.data_resposta.strftime('%d/%m/%Y') }}
+              </td>
+              <td>
+                <form method="POST"
+                      action="{{ url_for('admin.excluir_lancamento', resposta_id=r.id) }}"
+                      onsubmit="return confirm('Excluir este lançamento?')">
+                  <button type="submit" class="btn-sm btn-danger">Excluir</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body">
+        <p style="color:var(--text-muted);font-size:.9rem">Nenhum lançamento manual ainda.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Busca de aluno ──────────────────────────────────────────────────────────
+let timerAluno = null;
+
+function buscarAlunos(q) {
+  clearTimeout(timerAluno);
+  const lista = document.getElementById('lista-alunos');
+  if (q.length < 2) { lista.style.display = 'none'; return; }
+
+  timerAluno = setTimeout(() => {
+    fetch(`/api/alunos/buscar?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(alunos => {
+        lista.innerHTML = '';
+        if (!alunos.length) {
+          lista.innerHTML = '<div class="lista-item lista-vazio">Nenhum aluno encontrado</div>';
+        } else {
+          alunos.forEach(a => {
+            const el = document.createElement('div');
+            el.className = 'lista-item';
+            el.innerHTML = `<span class="li-nome">${a.nome}</span>
+                            <span class="li-info">${a.matricula}</span>`;
+            el.onclick = () => selecionarAluno(a);
+            lista.appendChild(el);
+          });
+        }
+        lista.style.display = 'block';
+      });
+  }, 250);
+}
+
+function selecionarAluno(a) {
+  document.getElementById('campo-aluno-id').value = a.id;
+  document.getElementById('aluno-tag-nome').textContent = a.nome;
+  document.getElementById('aluno-tag-mat').textContent  = a.matricula;
+  document.getElementById('lista-alunos').style.display = 'none';
+  document.getElementById('input-busca-aluno').style.display = 'none';
+  document.getElementById('aluno-selecionado').style.display = 'block';
+}
+
+function limparAluno() {
+  document.getElementById('campo-aluno-id').value = '';
+  document.getElementById('input-busca-aluno').value = '';
+  document.getElementById('input-busca-aluno').style.display = 'block';
+  document.getElementById('aluno-selecionado').style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#input-busca-aluno') && !e.target.closest('#lista-alunos'))
+    document.getElementById('lista-alunos').style.display = 'none';
+});
+
+// ── Carrega quizzes do trimestre ─────────────────────────────────────────────
+function carregarQuizzes(trimestreId) {
+  const sel = document.getElementById('sel-quiz');
+  sel.innerHTML = '<option value="">Carregando...</option>';
+  if (!trimestreId) {
+    sel.innerHTML = '<option value="">Selecione um trimestre primeiro...</option>';
+    return;
+  }
+  fetch(`/admin/api/quizzes-por-trimestre?trimestre_id=${trimestreId}`)
+    .then(r => r.json())
+    .then(quizzes => {
+      if (!quizzes.length) {
+        sel.innerHTML = '<option value="">Nenhum quiz neste trimestre</option>';
+        return;
+      }
+      sel.innerHTML = '<option value="">Selecionar quiz...</option>';
+      quizzes.forEach(q => {
+        const opt = document.createElement('option');
+        opt.value = q.id;
+        opt.textContent = q.titulo;
+        opt.dataset.total = q.total;
+        sel.appendChild(opt);
+      });
+    });
+}
+
+function preencherTotal(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.total) {
+    document.getElementById('campo-total').value = opt.dataset.total;
+    atualizarCalculo();
+  }
+}
+
+// ── Preview do cálculo ───────────────────────────────────────────────────────
+function atualizarCalculo() {
+  const acertos = parseInt(document.getElementById('campo-acertos').value) || 0;
+  const total   = parseInt(document.getElementById('campo-total').value)   || 0;
+  const preview = document.getElementById('preview-calculo');
+
+  if (total > 0 && acertos >= 0 && acertos <= total) {
+    const erros = total - acertos;
+    const pct   = (acertos / total * 100).toFixed(1);
+    document.getElementById('calc-acertos').textContent = acertos;
+    document.getElementById('calc-erros').textContent   = erros;
+    document.getElementById('calc-pct').textContent     = pct + '%';
+    preview.style.display = 'flex';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Editar Aluno — EBD Digital{% endblock %}
+{% block page_title %}Editar Aluno{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.alunos') }}" class="btn btn-ghost">← Voltar</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card card-form">
+  <div class="card-header">
+    <h3>Matrícula: <code>{{ aluno.matricula }}</code></h3>
+  </div>
+  <div class="card-body">
+    <form method="POST" class="form-grid">
+      <div class="form-group">
+        <label>Nome Completo *</label>
+        <input type="text" name="nome" value="{{ aluno.nome }}" required>
+      </div>
+      <div class="form-group">
+        <label>Telefone (WhatsApp)</label>
+        <input type="text" name="telefone" value="{{ aluno.telefone or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Data de Nascimento</label>
+        <input type="date" name="data_nascimento"
+               value="{{ aluno.data_nascimento.strftime('%Y-%m-%d') if aluno.data_nascimento else '' }}">
+      </div>
+      <div class="form-group">
+        <label>Sexo</label>
+        <select name="sexo">
+          <option value="">Selecionar...</option>
+          <option value="Masculino" {% if aluno.sexo == 'Masculino' %}selected{% endif %}>Masculino</option>
+          <option value="Feminino" {% if aluno.sexo == 'Feminino' %}selected{% endif %}>Feminino</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Igreja / Congregação</label>
+        <input type="text" name="igreja" value="{{ aluno.igreja or '' }}">
+      </div>
+      <div class="form-group">
+        <label>Classe</label>
+        <select name="classe">
+          <option value="">Selecionar...</option>
+          {% for c in ['Crianças','Adolescentes','Jovens','Adultos','Terceira Idade','Outra'] %}
+          <option value="{{ c }}" {% if aluno.classe == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        <a href="{{ url_for('admin.alunos') }}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

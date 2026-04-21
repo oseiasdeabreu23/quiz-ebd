@@ -1,0 +1,166 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Configurações — EBD Digital{% endblock %}
+{% block page_title %}Configurações de IA{% endblock %}
+
+{% block admin_content %}
+<form method="POST" id="form-config">
+<div class="two-col">
+
+  <!-- Coluna esquerda: Provedor + Chave + Modelos -->
+  <div>
+    <div class="card">
+      <div class="card-header"><h3>🤖 Provedor de IA</h3></div>
+      <div class="card-body">
+
+        <div class="form-group">
+          <label>Provedor</label>
+          <div class="provider-tabs">
+            <label class="provider-tab {% if cfg.ia_provedor == 'anthropic' %}active{% endif %}">
+              <input type="radio" name="ia_provedor" value="anthropic"
+                     {% if cfg.ia_provedor == 'anthropic' %}checked{% endif %}
+                     onchange="trocarProvedor('anthropic')">
+              <span class="provider-logo provider-anthropic">✦ Anthropic</span>
+            </label>
+            <label class="provider-tab {% if cfg.ia_provedor == 'openai' %}active{% endif %}">
+              <input type="radio" name="ia_provedor" value="openai"
+                     {% if cfg.ia_provedor == 'openai' %}checked{% endif %}
+                     onchange="trocarProvedor('openai')">
+              <span class="provider-logo provider-openai">⬡ OpenAI</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Chave de API</label>
+          <div class="api-key-wrapper">
+            <input type="password" name="ia_chave_api"
+                   id="api-key-input"
+                   value="{{ cfg.ia_chave_api }}"
+                   placeholder="Cole sua chave aqui (sk-ant-... ou sk-...)">
+            <button type="button" class="btn-eye" onclick="toggleApiKey()" title="Mostrar/ocultar">👁</button>
+          </div>
+          <small id="hint-anthropic" {% if cfg.ia_provedor != 'anthropic' %}style="display:none"{% endif %}>
+            Obtenha em <strong>console.anthropic.com</strong> → API Keys
+          </small>
+          <small id="hint-openai" {% if cfg.ia_provedor != 'openai' %}style="display:none"{% endif %}>
+            Obtenha em <strong>platform.openai.com</strong> → API Keys
+          </small>
+        </div>
+
+        <!-- Modelos Anthropic -->
+        <div id="modelos-anthropic" {% if cfg.ia_provedor != 'anthropic' %}style="display:none"{% endif %}>
+          <div class="form-group">
+            <label>Modelo Anthropic</label>
+            {% for val, nome in modelos.anthropic %}
+            <label class="model-option">
+              <input type="radio" name="ia_modelo_anthropic" value="{{ val }}"
+                     {% if cfg.ia_modelo_anthropic == val %}checked{% endif %}>
+              <div class="model-info">
+                <strong>{{ nome.split('(')[0].strip() }}</strong>
+                {% if '(' in nome %}<small>({{ nome.split('(')[1].rstrip(')') }})</small>{% endif %}
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Modelos OpenAI -->
+        <div id="modelos-openai" {% if cfg.ia_provedor != 'openai' %}style="display:none"{% endif %}>
+          <div class="form-group">
+            <label>Modelo OpenAI</label>
+            {% for val, nome in modelos.openai %}
+            <label class="model-option">
+              <input type="radio" name="ia_modelo_openai" value="{{ val }}"
+                     {% if cfg.ia_modelo_openai == val %}checked{% endif %}>
+              <div class="model-info">
+                <strong>{{ nome.split('(')[0].strip() }}</strong>
+                {% if '(' in nome %}<small>({{ nome.split('(')[1].rstrip(')') }})</small>{% endif %}
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block mt-4">
+          💾 Salvar Configurações
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Coluna direita: Prompt padrão -->
+  <div>
+    <div class="card">
+      <div class="card-header">
+        <h3>📝 Prompt Padrão</h3>
+        <button type="button" class="btn-sm btn-ghost" onclick="restaurarPrompt()">↺ Restaurar</button>
+      </div>
+      <div class="card-body">
+        <p class="text-muted" style="font-size:.85rem; margin-bottom:.875rem">
+          Este texto é pré-carregado na tela de geração de quiz e pode ser editado a cada geração.
+          Use <code>{num_perguntas}</code> onde quiser inserir a quantidade (20 ou 30 automaticamente).
+        </p>
+        <textarea name="prompt_base" id="prompt-textarea"
+                  rows="22" style="width:100%; font-size:.82rem; font-family:monospace;
+                  padding:.75rem; border:1.5px solid var(--border); border-radius:8px;
+                  resize:vertical; line-height:1.5">{{ cfg.prompt_base }}</textarea>
+      </div>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const PROMPT_PADRAO = `Crie um quiz bíblico com {num_perguntas} perguntas de múltipla escolha, numeradas de 1 a {num_perguntas}, com base exclusivamente no conteúdo dos links das lições que serão fornecidos.
+
+REGRAS IMPORTANTES:
+
+1. As perguntas devem ser elaboradas apenas com base no conteúdo principal das lições.
+2. NÃO utilizar informações de:
+- Comentários
+- Referências
+- Notas de rodapé
+- Comentários bibliográficos
+
+3. Cada pergunta deve conter 4 alternativas:
+   a)
+   b)
+   c)
+   d)
+
+4. Apenas UMA alternativa correta.
+
+5. As respostas corretas devem ser distribuídas de forma equilibrada entre as letras (a, b, c, d), evitando padrões.
+
+6. As alternativas corretas e incorretas devem ter tamanho semelhante.
+
+7. Variar entre perguntas de interpretação, conhecimento e aplicação.
+
+8. Definir nível: iniciante, intermediário ou avançado.
+
+9. Basear-se nas 13 lições do trimestre.`;
+
+function trocarProvedor(p) {
+  document.getElementById('modelos-anthropic').style.display = p === 'anthropic' ? 'block' : 'none';
+  document.getElementById('modelos-openai').style.display    = p === 'openai'    ? 'block' : 'none';
+  document.getElementById('hint-anthropic').style.display    = p === 'anthropic' ? 'block' : 'none';
+  document.getElementById('hint-openai').style.display       = p === 'openai'    ? 'block' : 'none';
+  document.querySelectorAll('.provider-tab').forEach(t => t.classList.remove('active'));
+  event.target.closest('.provider-tab').classList.add('active');
+}
+
+function toggleApiKey() {
+  const inp = document.getElementById('api-key-input');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function restaurarPrompt() {
+  if (confirm('Restaurar prompt para o padrão? O texto atual será perdido.')) {
+    document.getElementById('prompt-textarea').value = PROMPT_PADRAO;
+  }
+}
+</script>
+{% endblock %}

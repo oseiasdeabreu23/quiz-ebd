@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Admin — EBD Digital{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <span class="logo-icon">📖</span>
+      <h1>EBD Digital</h1>
+      <p>Painel Administrativo</p>
+    </div>
+    <form method="POST" class="auth-form">
+      <div class="form-group">
+        <label>Usuário</label>
+        <input type="text" name="username" placeholder="admin" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" name="password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+    </form>
+    <div class="auth-footer">
+      <a href="{{ url_for('auth.login_aluno') }}">← Área do Aluno</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

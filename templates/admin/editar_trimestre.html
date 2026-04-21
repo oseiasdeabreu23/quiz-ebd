@@ -1,0 +1,38 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Editar Trimestre — EBD Digital{% endblock %}
+{% block page_title %}Editar Trimestre{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.trimestres') }}" class="btn btn-ghost">← Voltar</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card card-form">
+  <div class="card-body">
+    <form method="POST" class="form-grid">
+      <div class="form-group">
+        <label>Ano *</label>
+        <input type="number" name="ano" value="{{ trimestre.ano }}"
+               min="2020" max="2030" required>
+      </div>
+      <div class="form-group">
+        <label>Trimestre *</label>
+        <select name="numero" required>
+          {% for n, label in [(1,'1º Trimestre (Jan–Mar)'),(2,'2º Trimestre (Abr–Jun)'),
+                              (3,'3º Trimestre (Jul–Set)'),(4,'4º Trimestre (Out–Dez)')] %}
+          <option value="{{ n }}" {% if trimestre.numero == n %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label>Tema Geral do Trimestre *</label>
+        <input type="text" name="tema" value="{{ trimestre.tema }}" required>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+        <a href="{{ url_for('admin.trimestres') }}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "aluno/base_aluno.html" %}
+{% block title %}{{ quiz.titulo }} — EBD Digital{% endblock %}
+
+{% block aluno_content %}
+<div class="quiz-container">
+  <div class="quiz-header">
+    <a href="{{ url_for('aluno.painel') }}" class="btn btn-ghost">← Voltar</a>
+    <div>
+      <h2>{{ quiz.titulo }}</h2>
+      <p>{{ quiz.trimestre.nome_display }} · Nível: {{ quiz.nivel }} · 20 questões</p>
+    </div>
+    <div class="quiz-timer" id="timer">⏱ <span id="tempo">00:00</span></div>
+  </div>
+
+  <div class="quiz-progress">
+    <div class="progress-bar">
+      <div class="progress-fill" id="progresso" style="width: 0%"></div>
+    </div>
+    <span id="progresso-texto">0 / {{ dados.perguntas|length }}</span>
+  </div>
+
+  <form method="POST" action="{{ url_for('aluno.enviar_quiz', quiz_id=quiz.id) }}"
+        id="form-quiz" onsubmit="return confirmarEnvio()">
+
+    {% for p in dados.perguntas %}
+    <div class="pergunta-card" id="perg-{{ p.numero }}"
+         {% if not loop.first %}style="display:none"{% endif %}>
+      <div class="perg-header">
+        <span class="perg-num-badge">{{ p.numero }} / {{ dados.perguntas|length }}</span>
+        <h3>{{ p.pergunta }}</h3>
+      </div>
+      <div class="alternativas">
+        {% for letra, texto in p.alternativas.items() %}
+        <label class="alternativa">
+          <input type="radio" name="q{{ p.numero }}" value="{{ letra }}" required>
+          <span class="alt-label">
+            <span class="alt-letra-badge">{{ letra }}</span>
+            <span>{{ texto }}</span>
+          </span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <div class="quiz-nav">
+      <button type="button" class="btn btn-ghost" id="btn-anterior" onclick="mudarPergunta(-1)" disabled>
+        ← Anterior
+      </button>
+      <button type="button" class="btn btn-secondary" id="btn-proximo" onclick="mudarPergunta(1)">
+        Próxima →
+      </button>
+      <button type="submit" class="btn btn-primary" id="btn-enviar" style="display:none">
+        Enviar Quiz ✓
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const totalPerguntas = {{ dados.perguntas|length }};
+let pergAtual = 1;
+let segundos = 0;
+
+// Timer
+const timerInterval = setInterval(() => {
+  segundos++;
+  const m = String(Math.floor(segundos / 60)).padStart(2, '0');
+  const s = String(segundos % 60).padStart(2, '0');
+  document.getElementById('tempo').textContent = `${m}:${s}`;
+}, 1000);
+
+function mudarPergunta(delta) {
+  const atual = document.getElementById(`perg-${pergAtual}`);
+  const nova = pergAtual + delta;
+
+  // Verificar se respondeu
+  if (delta > 0) {
+    const resps = atual.querySelectorAll(`input[name="q${pergAtual}"]`);
+    const marcado = [...resps].some(r => r.checked);
+    if (!marcado) {
+      atual.classList.add('perg-alerta');
+      setTimeout(() => atual.classList.remove('perg-alerta'), 600);
+      return;
+    }
+  }
+
+  if (nova < 1 || nova > totalPerguntas) return;
+
+  atual.style.display = 'none';
+  document.getElementById(`perg-${nova}`).style.display = 'block';
+  pergAtual = nova;
+
+  document.getElementById('btn-anterior').disabled = pergAtual === 1;
+
+  if (pergAtual === totalPerguntas) {
+    document.getElementById('btn-proximo').style.display = 'none';
+    document.getElementById('btn-enviar').style.display = 'inline-block';
+  } else {
+    document.getElementById('btn-proximo').style.display = 'inline-block';
+    document.getElementById('btn-enviar').style.display = 'none';
+  }
+
+  // Progresso
+  const pct = Math.round((pergAtual - 1) / totalPerguntas * 100);
+  document.getElementById('progresso').style.width = pct + '%';
+  document.getElementById('progresso-texto').textContent = `${pergAtual - 1} / ${totalPerguntas}`;
+}
+
+function confirmarEnvio() {
+  // Verificar última pergunta
+  const resps = document.querySelectorAll(`input[name="q${totalPerguntas}"]`);
+  const marcado = [...resps].some(r => r.checked);
+  if (!marcado) {
+    alert('Por favor, responda a última pergunta antes de enviar.');
+    return false;
+  }
+  clearInterval(timerInterval);
+  return confirm('Deseja enviar o quiz? Esta ação não pode ser desfeita.');
+}
+
+// Marcar progresso ao selecionar alternativa
+document.querySelectorAll('input[type=radio]').forEach(inp => {
+  inp.addEventListener('change', () => {
+    const n = inp.name.replace('q', '');
+    const card = document.getElementById(`perg-${n}`);
+    card.classList.add('perg-respondida');
+    const pct = Math.round(pergAtual / totalPerguntas * 100);
+    document.getElementById('progresso').style.width = pct + '%';
+    document.getElementById('progresso-texto').textContent = `${pergAtual} / ${totalPerguntas}`;
+  });
+});
+</script>
+{% endblock %}

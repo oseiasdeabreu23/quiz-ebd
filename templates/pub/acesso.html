@@ -1,0 +1,162 @@
+{% extends "pub/base_pub.html" %}
+{% block title %}{{ quiz.titulo }} — EBD Digital{% endblock %}
+
+{% block content %}
+<div class="pub-acesso-page">
+
+  <!-- Cabeçalho do quiz -->
+  <div class="pub-quiz-info">
+    <span class="pub-nivel nivel-{{ quiz.nivel }}">{{ quiz.nivel }}</span>
+    <h1>{{ quiz.titulo }}</h1>
+    <p>{{ quiz.trimestre.nome_display }}</p>
+    <div class="pub-quiz-meta">
+      {% set n = quiz.perguntas_json | fromjson %}
+      <span>📝 {{ n.perguntas | length }} questões</span>
+      <span>⏱ Responda no seu ritmo</span>
+      <span>📖 1 tentativa por aluno</span>
+    </div>
+  </div>
+
+  <!-- Formulário de identificação -->
+  <div class="pub-card">
+    <h2>Como você quer entrar?</h2>
+
+    <!-- Busca de nome -->
+    <div class="form-group" id="sec-busca">
+      <label>Digite seu nome para buscar</label>
+      <div class="search-wrapper">
+        <input type="text" id="input-nome" placeholder="Ex: João Silva"
+               autocomplete="off" oninput="buscarAlunos(this.value)">
+        <span class="search-icon">🔍</span>
+      </div>
+      <div id="lista-resultados" class="lista-resultados" style="display:none"></div>
+    </div>
+
+    <!-- Aluno selecionado -->
+    <div id="sec-selecionado" style="display:none">
+      <div class="aluno-selecionado">
+        <span class="aluno-avatar">👤</span>
+        <div>
+          <strong id="nome-selecionado"></strong>
+          <small id="info-selecionado"></small>
+        </div>
+        <button type="button" class="btn-dessel" onclick="desselecionarAluno()">✕</button>
+      </div>
+      <form method="POST" action="{{ url_for('pub.entrar', token=token) }}">
+        <input type="hidden" name="acao" value="selecionar">
+        <input type="hidden" name="aluno_id" id="campo-aluno-id">
+        <button type="submit" class="btn btn-primary btn-block" style="margin-top:1rem">
+          Entrar e Responder Quiz →
+        </button>
+      </form>
+    </div>
+
+    <!-- Divisor -->
+    <div class="divisor" id="divisor">
+      <span>ou</span>
+    </div>
+
+    <!-- Cadastro rápido -->
+    <div id="sec-cadastro">
+      <p style="font-size:.9rem;color:var(--text-muted);margin-bottom:1rem">
+        Não encontrou seu nome? Cadastre-se rapidamente:
+      </p>
+      <form method="POST" action="{{ url_for('pub.entrar', token=token) }}" id="form-cadastro">
+        <input type="hidden" name="acao" value="cadastrar">
+        <div class="form-group">
+          <label>Seu nome completo *</label>
+          <input type="text" name="nome" id="input-cadastro-nome"
+                 placeholder="Ex: Maria Oliveira" required>
+        </div>
+        <div class="form-group">
+          <label>Igreja / Congregação <span style="color:var(--text-muted)">(opcional)</span></label>
+          <input type="text" name="igreja" placeholder="Ex: Igreja Central">
+        </div>
+        <div class="form-group">
+          <label>Classe <span style="color:var(--text-muted)">(opcional)</span></label>
+          <select name="classe">
+            <option value="">Selecionar...</option>
+            <option>Crianças</option><option>Adolescentes</option>
+            <option>Jovens</option><option>Adultos</option>
+            <option>Terceira Idade</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-secondary btn-block">
+          Cadastrar e Entrar →
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let timerBusca = null;
+let alunoSelecionadoId = null;
+
+function buscarAlunos(q) {
+  clearTimeout(timerBusca);
+  const lista = document.getElementById('lista-resultados');
+
+  if (q.length < 2) { lista.style.display = 'none'; return; }
+
+  timerBusca = setTimeout(() => {
+    fetch(`/api/alunos/buscar?q=${encodeURIComponent(q)}`)
+      .then(r => r.json())
+      .then(alunos => {
+        lista.innerHTML = '';
+        if (alunos.length === 0) {
+          lista.innerHTML = '<div class="lista-item lista-vazio">Nenhum aluno encontrado com esse nome</div>';
+        } else {
+          alunos.forEach(a => {
+            const el = document.createElement('div');
+            el.className = 'lista-item';
+            el.innerHTML = `
+              <span class="li-nome">${a.nome}</span>
+              <span class="li-info">${a.classe || ''} ${a.igreja ? '· ' + a.igreja : ''}</span>`;
+            el.onclick = () => selecionarAluno(a);
+            lista.appendChild(el);
+          });
+        }
+        lista.style.display = 'block';
+      });
+  }, 300);
+}
+
+function selecionarAluno(a) {
+  alunoSelecionadoId = a.id;
+  document.getElementById('campo-aluno-id').value = a.id;
+  document.getElementById('nome-selecionado').textContent = a.nome;
+  document.getElementById('info-selecionado').textContent =
+    [a.classe, a.igreja].filter(Boolean).join(' · ') || 'Aluno cadastrado';
+  document.getElementById('lista-resultados').style.display = 'none';
+  document.getElementById('sec-busca').style.display = 'none';
+  document.getElementById('sec-selecionado').style.display = 'block';
+  document.getElementById('divisor').style.display = 'none';
+  document.getElementById('sec-cadastro').style.display = 'none';
+}
+
+function desselecionarAluno() {
+  alunoSelecionadoId = null;
+  document.getElementById('input-nome').value = '';
+  document.getElementById('sec-busca').style.display = 'block';
+  document.getElementById('sec-selecionado').style.display = 'none';
+  document.getElementById('divisor').style.display = 'flex';
+  document.getElementById('sec-cadastro').style.display = 'block';
+}
+
+// Preencher campo de cadastro com o que digitou
+document.getElementById('input-nome').addEventListener('input', function() {
+  document.getElementById('input-cadastro-nome').value = this.value;
+});
+
+// Fechar lista ao clicar fora
+document.addEventListener('click', e => {
+  if (!e.target.closest('#sec-busca')) {
+    document.getElementById('lista-resultados').style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

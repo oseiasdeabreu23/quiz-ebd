@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block body_class %}aluno-layout{% endblock %}
+
+{% block content %}
+<div class="aluno-wrapper">
+  <header class="aluno-header">
+    <div class="header-brand">
+      <span>📖</span>
+      <div>
+        <strong>EBD Digital</strong>
+        <small>{{ session.aluno_nome }}</small>
+      </div>
+    </div>
+    <nav class="aluno-nav">
+      <a href="{{ url_for('aluno.painel') }}"
+         class="nav-link {% if request.endpoint == 'aluno.painel' %}active{% endif %}">
+        Início
+      </a>
+      <a href="{{ url_for('aluno.desafios') }}"
+         class="nav-link {% if request.endpoint == 'aluno.desafios' %}active{% endif %}">
+        Desafios
+      </a>
+      <a href="{{ url_for('auth.logout_aluno') }}" class="nav-link">Sair</a>
+    </nav>
+  </header>
+
+  <main class="aluno-main">
+    {% block aluno_content %}{% endblock %}
+  </main>
+
+  <footer class="aluno-footer">
+    <p>EBD Digital © {{ 2024 }}</p>
+  </footer>
+</div>
+{% endblock %}

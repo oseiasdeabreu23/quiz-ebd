@@ -1,0 +1,105 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Dashboard — EBD Digital{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block admin_content %}
+<!-- Stats Cards -->
+<div class="stats-grid">
+  <div class="stat-card stat-blue">
+    <div class="stat-icon">👥</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.total_alunos }}</span>
+      <span class="stat-label">Alunos Ativos</span>
+    </div>
+  </div>
+  <div class="stat-card stat-green">
+    <div class="stat-icon">📅</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.total_trimestres }}</span>
+      <span class="stat-label">Trimestres</span>
+    </div>
+  </div>
+  <div class="stat-card stat-purple">
+    <div class="stat-icon">📝</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.total_quizzes }}</span>
+      <span class="stat-label">Quizzes</span>
+    </div>
+  </div>
+  <div class="stat-card stat-orange">
+    <div class="stat-icon">✅</div>
+    <div class="stat-info">
+      <span class="stat-value">{{ stats.total_respostas }}</span>
+      <span class="stat-label">Quizzes Respondidos</span>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="section-title">Ações Rápidas</div>
+<div class="quick-actions">
+  <a href="{{ url_for('admin.novo_aluno') }}" class="action-card">
+    <span>➕</span>
+    <strong>Novo Aluno</strong>
+  </a>
+  <a href="{{ url_for('admin.novo_trimestre') }}" class="action-card">
+    <span>📅</span>
+    <strong>Novo Trimestre</strong>
+  </a>
+  <a href="{{ url_for('admin.gerar_quiz') }}" class="action-card">
+    <span>🤖</span>
+    <strong>Gerar Quiz com IA</strong>
+  </a>
+  <a href="{{ url_for('admin.relatorios') }}" class="action-card">
+    <span>📊</span>
+    <strong>Ver Relatórios</strong>
+  </a>
+</div>
+
+<div class="two-col">
+  <!-- Trimestres recentes -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Trimestres Recentes</h3>
+      <a href="{{ url_for('admin.trimestres') }}" class="link-sm">Ver todos</a>
+    </div>
+    <div class="card-body">
+      {% if trimestres %}
+        {% for t in trimestres %}
+        <div class="list-item">
+          <div>
+            <strong>{{ t.nome_display }}</strong>
+            <small>{{ t.tema }}</small>
+          </div>
+          <span class="badge badge-info">{{ t.licoes|length }} lições</span>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted">Nenhum trimestre cadastrado.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Logs recentes -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Atividade Recente</h3>
+    </div>
+    <div class="card-body">
+      {% if logs %}
+        {% for log in logs %}
+        <div class="list-item">
+          <div>
+            <strong>{{ log.acao }}</strong>
+            <small>{{ log.detalhes[:50] if log.detalhes else '' }}</small>
+          </div>
+          <small class="text-muted">{{ log.timestamp.strftime('%d/%m %H:%M') }}</small>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted">Sem atividade.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

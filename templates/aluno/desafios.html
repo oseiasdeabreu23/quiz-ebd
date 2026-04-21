@@ -1,0 +1,114 @@
+{% extends "aluno/base_aluno.html" %}
+{% block title %}Desafios — EBD Digital{% endblock %}
+
+{% block aluno_content %}
+<div class="desafios-container">
+
+  <!-- Streak -->
+  <div class="streak-banner">
+    <div class="streak-info">
+      <span class="big-fire">🔥</span>
+      <div>
+        <strong>{{ streak }} dia{{ 's' if streak != 1 else '' }} seguido{{ 's' if streak != 1 else '' }}</strong>
+        <p>Mantenha sua sequência de dedicação!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desafio de hoje -->
+  <div class="card">
+    <div class="card-header">
+      <h3>📋 Desafio de Hoje — {{ hoje.strftime('%d/%m/%Y') }}</h3>
+    </div>
+    <div class="card-body">
+      <form method="POST" class="desafio-form">
+        <div class="desafio-items">
+
+          <label class="desafio-item {% if desafio_hoje and desafio_hoje.leitura %}item-checked{% endif %}">
+            <input type="checkbox" name="leitura"
+                   {% if desafio_hoje and desafio_hoje.leitura %}checked{% endif %}>
+            <span class="desafio-icon">📖</span>
+            <div>
+              <strong>Leitura Bíblica</strong>
+              <small>Leia a passagem do dia</small>
+            </div>
+            <span class="check-mark">✓</span>
+          </label>
+
+          <label class="desafio-item {% if desafio_hoje and desafio_hoje.oracao %}item-checked{% endif %}">
+            <input type="checkbox" name="oracao"
+                   {% if desafio_hoje and desafio_hoje.oracao %}checked{% endif %}>
+            <span class="desafio-icon">🙏</span>
+            <div>
+              <strong>Oração</strong>
+              <small>Dedique tempo para orar</small>
+            </div>
+            <span class="check-mark">✓</span>
+          </label>
+
+          <label class="desafio-item {% if desafio_hoje and desafio_hoje.culto %}item-checked{% endif %}">
+            <input type="checkbox" name="culto"
+                   {% if desafio_hoje and desafio_hoje.culto %}checked{% endif %}>
+            <span class="desafio-icon">⛪</span>
+            <div>
+              <strong>Culto Doméstico</strong>
+              <small>Realize o culto em família</small>
+            </div>
+            <span class="check-mark">✓</span>
+          </label>
+
+          <label class="desafio-item {% if desafio_hoje and desafio_hoje.meditacao %}item-checked{% endif %}">
+            <input type="checkbox" name="meditacao"
+                   {% if desafio_hoje and desafio_hoje.meditacao %}checked{% endif %}>
+            <span class="desafio-icon">💭</span>
+            <div>
+              <strong>Meditação</strong>
+              <small>Medite na Palavra</small>
+            </div>
+            <span class="check-mark">✓</span>
+          </label>
+
+        </div>
+        <button type="submit" class="btn btn-primary btn-block mt-4">Salvar Desafios de Hoje</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Histórico -->
+  <div class="card">
+    <div class="card-header"><h3>📅 Histórico (últimos 30 dias)</h3></div>
+    <div class="card-body">
+      {% if historico %}
+      <div class="hist-desafios">
+        {% for d in historico %}
+        <div class="hist-dia {% if d.total_marcado == 4 %}dia-completo{% elif d.total_marcado > 0 %}dia-parcial{% else %}dia-vazio{% endif %}">
+          <span class="hist-data">{{ d.data.strftime('%d/%m') }}</span>
+          <div class="hist-marks">
+            <span title="Leitura" class="{% if d.leitura %}m-ok{% else %}m-no{% endif %}">📖</span>
+            <span title="Oração" class="{% if d.oracao %}m-ok{% else %}m-no{% endif %}">🙏</span>
+            <span title="Culto" class="{% if d.culto %}m-ok{% else %}m-no{% endif %}">⛪</span>
+            <span title="Meditação" class="{% if d.meditacao %}m-ok{% else %}m-no{% endif %}">💭</span>
+          </div>
+          <span class="hist-total">{{ d.total_marcado }}/4</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-muted">Nenhum desafio registrado ainda. Comece hoje!</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle visual ao clicar nos desafios
+document.querySelectorAll('.desafio-item input[type=checkbox]').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.closest('.desafio-item').classList.toggle('item-checked', cb.checked);
+  });
+});
+</script>
+{% endblock %}

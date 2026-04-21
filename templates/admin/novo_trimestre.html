@@ -1,0 +1,38 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Novo Trimestre — EBD Digital{% endblock %}
+{% block page_title %}Novo Trimestre{% endblock %}
+
+{% block header_actions %}
+<a href="{{ url_for('admin.trimestres') }}" class="btn btn-ghost">← Voltar</a>
+{% endblock %}
+
+{% block admin_content %}
+<div class="card card-form">
+  <div class="card-body">
+    <form method="POST" class="form-grid">
+      <div class="form-group">
+        <label>Ano *</label>
+        <input type="number" name="ano" value="{{ ano_atual }}" min="2020" max="2030" required>
+      </div>
+      <div class="form-group">
+        <label>Trimestre *</label>
+        <select name="numero" required>
+          <option value="1">1º Trimestre (Jan–Mar)</option>
+          <option value="2">2º Trimestre (Abr–Jun)</option>
+          <option value="3">3º Trimestre (Jul–Set)</option>
+          <option value="4">4º Trimestre (Out–Dez)</option>
+        </select>
+      </div>
+      <div class="form-group form-full">
+        <label>Tema Geral do Trimestre *</label>
+        <input type="text" name="tema" required
+               placeholder="Ex: A Fé que Transforma">
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Criar Trimestre</button>
+        <a href="{{ url_for('admin.trimestres') }}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,85 @@
+{% extends "aluno/base_aluno.html" %}
+{% block title %}Resultado — EBD Digital{% endblock %}
+
+{% block aluno_content %}
+<div class="resultado-container">
+
+  <!-- Score card -->
+  <div class="score-card {% if resposta.pontuacao >= 70 %}score-good{% elif resposta.pontuacao >= 50 %}score-ok{% else %}score-bad{% endif %}">
+    <h2>{{ quiz.titulo }}</h2>
+    <div class="score-circle">
+      <span class="score-number">{{ resposta.pontuacao|int }}%</span>
+      <small>{{ resposta.acertos }}/{{ resposta.total_perguntas }} acertos</small>
+    </div>
+    <p class="score-msg">
+      {% if resposta.pontuacao >= 90 %}🏆 Excelente! Parabéns!
+      {% elif resposta.pontuacao >= 70 %}✅ Muito bem! Continue assim!
+      {% elif resposta.pontuacao >= 50 %}📚 Bom! Revise as lições para melhorar.
+      {% else %}💪 Não desanime! Estude e tente nos próximos quizzes.
+      {% endif %}
+    </p>
+    <p><small>Respondido em {{ resposta.data_resposta.strftime('%d/%m/%Y às %H:%M') }}</small></p>
+  </div>
+
+  <!-- Evolução dos últimos quizzes -->
+  {% if historico | length > 1 %}
+  <div class="card" style="margin-bottom:1.5rem">
+    <div class="card-header"><h3>Sua Evolução</h3></div>
+    <div class="card-body">
+      <div class="evolucao-chart">
+        {% for r in historico %}
+        {% set h_pct = r.pontuacao | int %}
+        <div class="evolucao-bar-wrap {% if r.id == resposta.id %}atual{% endif %}">
+          <div class="evolucao-bar-label">{{ h_pct }}%</div>
+          <div class="evolucao-bar-container">
+            <div class="evolucao-bar
+              {% if h_pct >= 80 %}bar-ouro
+              {% elif h_pct >= 60 %}bar-prata
+              {% else %}bar-bronze{% endif %}"
+              style="height: {{ [h_pct, 5] | max }}%"
+              title="{{ r.pontuacao }}%">
+            </div>
+          </div>
+          <div class="evolucao-bar-num">Q{{ loop.index }}</div>
+          {% if r.id == resposta.id %}<div class="evolucao-atual-badge">atual</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      <p class="evolucao-legenda">Últimos {{ historico | length }} quiz(zes) realizados</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Gabarito -->
+  <div class="gabarito">
+    <h3>Gabarito Comentado</h3>
+    {% for p in dados.perguntas %}
+    {% set num = p.numero|string %}
+    {% set resp_aluno = respostas_aluno.get(num, '') %}
+    {% set acertou = resp_aluno == p.resposta_correta %}
+    <div class="gab-item {% if acertou %}gab-certo{% else %}gab-errado{% endif %}">
+      <div class="gab-header">
+        <span class="gab-num">{{ p.numero }}</span>
+        <p>{{ p.pergunta }}</p>
+        <span class="gab-icon">{{ '✓' if acertou else '✗' }}</span>
+      </div>
+      <div class="gab-alts">
+        {% for letra, texto in p.alternativas.items() %}
+        <div class="gab-alt
+          {% if letra == p.resposta_correta %}gab-alt-correta{% endif %}
+          {% if letra == resp_aluno and not acertou %}gab-alt-errada{% endif %}">
+          <span>{{ letra }})</span> {{ texto }}
+          {% if letra == p.resposta_correta %}<span class="gab-tick">✓ Correta</span>{% endif %}
+          {% if letra == resp_aluno and not acertou %}<span class="gab-cross">← Sua resposta</span>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="resultado-actions">
+    <a href="{{ url_for('aluno.painel') }}" class="btn btn-primary">← Voltar ao Painel</a>
+  </div>
+</div>
+{% endblock %}

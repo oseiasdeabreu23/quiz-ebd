@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>{% block title %}EBD Digital{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="pub-layout">
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+  <div class="flash-container">
+    {% for cat, msg in messages %}
+    <div class="flash flash-{{ cat }}">
+      <span>{{ msg }}</span>
+      <button onclick="this.parentElement.remove()">×</button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+{% endwith %}
+
+<header class="pub-header">
+  <div class="pub-header-inner">
+    <span class="pub-logo">📖 EBD Digital</span>
+    {% if session.pub_aluno_nome %}
+    <div class="pub-user-info">
+      <span>{{ session.pub_aluno_nome }}</span>
+      {% if token is defined %}
+      <a href="{{ url_for('pub.trocar', token=token) }}" class="pub-trocar">Trocar</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</header>
+
+<main class="pub-main">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="pub-footer">
+  <p>EBD Digital — Escola Bíblica Dominical</p>
+</footer>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
