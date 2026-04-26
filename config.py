@@ -11,7 +11,9 @@ class Config:
     _db_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(BASE_DIR, 'ebd_digital.db'))
     # Render fornece postgres://, mas SQLAlchemy exige postgresql://
     if _db_url.startswith('postgres://'):
-        _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+        _db_url = _db_url.replace('postgres://', 'postgresql+pg8000://', 1)
+    elif _db_url.startswith('postgresql://'):
+        _db_url = _db_url.replace('postgresql://', 'postgresql+pg8000://', 1)
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
